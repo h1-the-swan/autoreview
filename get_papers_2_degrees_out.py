@@ -70,7 +70,7 @@ def collect_citing_and_cited(papers, collected=set(), collected_ids=set(), count
             if pid not in collected_ids:
                 collected_ids.add(pid)
                 collected.add(pr.paper_citing)
-        if i in [0,1,4,9,19,49,99,199,499,999] or i % 9999 == 0:
+        if (i+1) in [1,2,5,10,20,50,100,200,500,1000,5000] or (i+1) % 10000 == 0:
             logger.debug("done with {} papers. len(collected)=={}".format(i+1, len(collected)))
     return collected, collected_ids, counter
 
@@ -80,6 +80,7 @@ def pickle_dataframe_from_papers(papers, outfname):
         rows.append({
             'Paper_ID': p.Paper_ID,
             'title': p.title,
+            'year': p.year,
             'EF': p.EF,
             'cl': p.cl
         })

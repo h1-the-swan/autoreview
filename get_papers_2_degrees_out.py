@@ -93,8 +93,7 @@ def main(args):
 
     outdir = os.path.abspath(args.outdir)
 
-    # review paper on community detection in graphs
-    review_paper_id = 2127048411
+    review_paper_id = args.id
     review_paper = session.query(Paper).get(review_paper_id)
     logger.debug("getting references from paper {} (Paper_ID {})".format(review_paper_id, review_paper.title))
     start = timer()
@@ -165,6 +164,7 @@ if __name__ == "__main__":
     logger.info( '{:%Y-%m-%d %H:%M:%S}'.format(datetime.now()) )
     import argparse
     parser = argparse.ArgumentParser(description="given a set of papers (i.e., references from a review article), take a random subset (i.e., the seed papers), and collect all of the citing and cited papers. Then add in the citing and cited papers for all of those papers.")
+    parser.add_argument("id", help="paper id for the review article that contains the references")
     parser.add_argument("-o", "--outdir", default="./", help="directory for output")
     parser.add_argument("--debug", action='store_true', help="output debugging info")
     global args

@@ -1,0 +1,36 @@
+The problem:
+A user has a set of seed papers, and wants to generate a literature review.
+We don't have ground truth for what those target papers are.
+
+We use existing literature reviews to simulate the problem.
+
+For the first pass at this, use "Community Detection in Graphs" by Santo Fortunato (MAG ID: 2127048411). In our database, this paper cites 447 papers.
+We randomly sample 50 of these papers to represent our "seed" papers.
+The remaining 397 papers are our "target" papers.
+The goal is to find these 397 papers---the "needle"---in a larger set of papers---the "haystack".
+It would be nice if our "haystack" was the total set of all papers. But practically, there are too many papers to do this. So we identify a haystack from the 50 seed papers. We take every paper that has cited or been cited by the 50 seed papers. Then we go one more level out, and add every paper that has cited or been cited by one of those. After removing the seed papers from this set, this gives us a haystack of 2613291 (~2.6M) papers. All 397 target papers can be found in this haystack.
+
+Getting the haystack takes a few hours.
+
+We can generate features for each of the papers in this haystack based on the 50 seed papers.
+
+Start with two features:
+1. pagerank
+2. Average distance of Infomap cluster of the haystack paper to each of the seed papers. Distance between two papers is (mean cluster depth - depth of least common ancestor) / mean cluster depth.
+
+Generating this second feature takes the most time (~5 minutes).
+
+
+## Ranking:
+
+Train a Logistic Regression model using the entire haystack, using these two features. The dependent variable is whether the paper is a target paper or not. (extremely imbalanced toward the negative class, so not ideal...)
+
+Take the top 397 predicted papers from the haystack.
+
+==> 108 of these are actually target papers. 289 are not.
+
+We identified 108 of the 397: 27%
+
+
+I tried this whole procedure with another review article: A Survey of Predictive Modeling on Imbalanced Domains, by Branco et al. (MAG ID: 2490420619).
+Using 50 seed papers, we were looking for 193 target papers. The haystack was 963801 papers. Taking the top 193 papers from our classifier, we identified 57 (30%).

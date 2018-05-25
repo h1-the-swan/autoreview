@@ -18,6 +18,18 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+def prepare_directory(mag_id, description=None):
+    dirname = "review_{}".format(mag_id)
+    if description:
+        dirname = dirname + "_{}".format(description)
+    dirname = os.path.join('data', dirname)
+    if not os.path.exists(dirname):
+        logger.debug("creating directory: {}".format(dirname))
+        os.mkdir(dirname)
+    else:
+        logger.debug("directory {} already exists. using this directory.".format(dirname))
+    return dirname
+
 # http://scikit-learn.org/stable/auto_examples/hetero_feature_union.html
 class ItemSelector(BaseEstimator, TransformerMixin):
     """For data grouped by feature, select subset of data at a provided key.

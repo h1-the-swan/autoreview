@@ -16,6 +16,8 @@ logging.basicConfig(format='%(asctime)s %(name)s.%(lineno)d %(levelname)s : %(me
 # logger = logging.getLogger(__name__)
 logger = logging.getLogger('__main__').getChild(__name__)
 
+from utils.autoreview_utils import prepare_directory
+
 COLLECT_PAPERS_SCRIPT = 'get_papers_2_degrees_out.py'
 EXPERIMENTS_SCRIPT = 'pipeline_experiments.py'
 
@@ -24,15 +26,7 @@ def main(args):
         raise RuntimeError("must specify the --year of the review article")
     if args.min_seed >= args.max_seed:
         raise RuntimeError("--min-seed must be less than --max-seed (min_seed=={}, max_seed=={})".format(args.min_seed, args_max_seed))
-    dirname = "review_{}".format(args.paperid)
-    if args.description:
-        dirname = dirname + "_{}".format(args.description)
-    dirname = os.path.join('data', dirname)
-    if not os.path.exists(dirname):
-        logger.debug("creating directory: {}".format(dirname))
-        os.mkdir(dirname)
-    else:
-        logger.debug("directory {} already exists. using this directory.".format(dirname))
+    dirname = prepare_directory(args.paperid, args.description)
 
     for random_seed in range(args.min_seed, args.max_seed):
         seed_dirname = os.path.join(dirname, "seed_{:03d}".format(random_seed))
@@ -40,7 +34,7 @@ def main(args):
             raise RuntimeError("directory {} already exists!".format(seed_dirname))
         logger.debug("creating directory: {}".format(seed_dirname))
         os.mkdir(seed_dirname)
-        cmd = "python {} {} -o {} --seed {} --debug".format(COLLECT_PAPERS_SCRIPT, args.paperid, seed_dirname, random_seed)
+        cmd = "python {} {} -o {} --seed {} --num-seed-papers {} --debug".format(COLLECT_PAPERS_SCRIPT, args.paperid, seed_dirname, random_seed, args.num_seed_papers)
         logger.debug("running command: {}...".format(cmd))
         cmd_list = shlex.split(cmd)
         log_fname = "collect_seed_{:03d}_{:%Y%m%d}.log".format(random_seed, datetime.now())
@@ -88,7 +82,7 @@ if __name__ == "__main__":
     logger.info( '{:%Y-%m-%d %H:%M:%S}'.format(datetime.now()) )
     import argparse
     parser = argparse.ArgumentParser(description="given one review paper and a range of random seeds, collect all of the candidate papers (haystack) then run experiments")
-    parser.add_argument("paperid", help="paper id for the review article that contains the references")
+    parser.add_argument("paperid", help="MAG paper id for the review article that contains the references")
     parser.add_argument("--year", type=int, help="the publication year of the review article")
     parser.add_argument("--min-seed", type=int, default=1, help="This script will collect data and run experiments for every integer seed value between min-seed and max-seed. default range is [1-6)")
     parser.add_argument("--max-seed", type=int, default=6, help="max random seed (non-inclusive). see help for --min-seed")

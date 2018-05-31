@@ -15,6 +15,7 @@ jupyter-client==5.2.3
 jupyter-core==4.4.0
 kiwisolver==1.0.1
 matplotlib==2.2.2
+-e git://github.com/h1-the-swan/mysql_connect.git@cb225c6d4f1c14bcd9275f1e934d6a007d576f97#egg=mysql_connect
 numpy==1.14.3
 pandas==0.22.0
 parso==0.1.1
@@ -35,7 +36,7 @@ scipy==1.0.1
 simplegeneric==0.8.1
 six==1.11.0
 sklearn==0.0
-SQLAlchemy==1.2.6
+SQLAlchemy==1.2.7
 tornado==5.0.2
 traitlets==4.3.2
 urllib3==1.22

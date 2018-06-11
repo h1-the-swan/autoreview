@@ -1,4 +1,6 @@
+from __future__ import division
 import sys, os, time
+from glob import glob
 from datetime import datetime
 from timeit import default_timer as timer
 try:
@@ -14,6 +16,10 @@ logging.basicConfig(format='%(asctime)s %(name)s.%(lineno)d %(levelname)s : %(me
 # logger = logging.getLogger(__name__)
 logger = logging.getLogger('__main__').getChild(__name__)
 
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.externals import joblib
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -29,6 +35,84 @@ def prepare_directory(mag_id, description=None):
     else:
         logger.debug("directory {} already exists. using this directory.".format(dirname))
     return dirname
+
+def load_data_from_pickles(data_dir, files=['test_papers', 'seed_papers', 'target_papers'], ext='.pickle'):
+    dfs = []
+    for fn in files:
+        df = pd.read_pickle(os.path.join(data_dir, fn + ext))
+        df = df.drop_duplicates()
+        dfs.append(df)
+    return dfs
+
+def remove_seed_papers_from_test_set(test_papers, seed_papers):
+    n_before = len(test_papers)
+    test_papers = test_papers.drop(seed_papers.index, errors='ignore')
+    n_after = len(test_papers)
+    logger.debug("removed {} seed papers from the haystack. size of haystack: {}".format(n_before-n_after, n_after))
+    return test_papers
+
+def remove_missing_titles(df, colname='title'):
+    n_before = len(df)
+    df = df.dropna(subset=[colname])
+    n_after = len(df)
+    logger.debug("removed {} papers with missing titles. size of haystack: {}".format(n_before-n_after, n_after))
+    return df
+
+def year_lowpass_filter(df, year=None):
+    # only keep papers published on or before a given year
+    n_before = len(df)
+    if year is not None:
+        df = df[df.year<=year]
+    n_after = len(df)
+    logger.debug("removed {} papers published after year {}. size of haystack: {}".format(n_before-n_after, year, n_after))
+    return df
+
+def prepare_data_for_model(data_dir, year=None):
+    test_papers, seed_papers, target_papers = load_data_from_pickles(data_dir)
+    # test_subset = test_papers.sample(n=args.subset_size, random_state=args.seed)
+    test_papers = remove_seed_papers_from_test_set(test_papers, seed_papers)
+    target_ids = set(target_papers.Paper_ID)
+    test_papers['target'] = test_papers.Paper_ID.apply(lambda x: x in target_ids)
+    test_papers = remove_missing_titles(test_papers)
+    if year is None:
+        year = get_year_from_datadir(data_dir)
+    test_papers = year_lowpass_filter(test_papers, year=year)
+    return test_papers, seed_papers, target_papers
+
+def prepare_data_for_pretrained_model(data_dir, year, random_seed=999):
+    test_papers, seed_papers, target_papers = prepare_data_for_model(data_dir, year)
+    X = test_papers.reset_index()
+    y = X['target']
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=random_seed)
+    return X_train, X_test, y_train, y_test
+
+def get_paper_info(datadir):
+    g = glob(os.path.join(datadir, '..', '*paperinfo.json'))
+    if len(g) != 1:
+        raise RuntimeError("failed to find paper info")
+    return pd.read_json(os.path.join(g[0]), typ='series')
+
+def get_year_from_datadir(datadir):
+    paper_info = get_paper_info(datadir)
+    mag_date = datetime.utcfromtimestamp(paper_info['mag_date']/1000)
+    year = mag_date.year
+    return year
+
+def get_best_model_path(datadir):
+    g = glob(os.path.join(datadir, 'best_model*'))
+    g.sort()
+    best_model_dirname = g[-1]
+    return os.path.join(best_model_dirname, 'best_model.pickle')
+
+def get_best_model_from_datadir(datadir):
+    return joblib.load(get_best_model_path(datadir))
+
+def predict_ranks_from_data(pipeline, df):
+    start = timer()
+    y_score = pipeline.predict_proba(df)[:, 1]
+    logger.debug("predicted probabilities in {}".format(format_timespan(timer()-start)))
+    pred_ranks = pd.Series(y_score, index=df.index, name="pred_ranks")
+    return df.join(pred_ranks).sort_values('pred_ranks', ascending=False)
 
 # http://scikit-learn.org/stable/auto_examples/hetero_feature_union.html
 class ItemSelector(BaseEstimator, TransformerMixin):

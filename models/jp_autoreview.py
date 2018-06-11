@@ -23,3 +23,4 @@ class PipelineTest(Base):
     clf_type = Column(String(64))
     time_fit = Column(Integer)
     time_predict = Column(Integer)
+    saved_model = Column(Text)

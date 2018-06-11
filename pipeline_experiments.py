@@ -274,7 +274,9 @@ def main(args):
     test_papers['target'] = test_papers.Paper_ID.apply(lambda x: x in target_ids)
     test_papers = remove_missing_titles(test_papers)
     test_papers = year_lowpass_filter(test_papers, year=args.year)
-    logger.debug("There are {} target papers. {} of these appear in the haystack.".format(len(target_ids), test_papers['target'].sum()))
+    ### TODO: MOVE ABOVE TO UTILS
+    # logger.debug("There are {} target papers. {} of these appear in the haystack.".format(len(target_ids), test_papers['target'].sum()))
+    logger.debug("There are {} target papers. {} of these appear in the haystack.".format(target_papers.Paper_ID.nunique(), test_papers['target'].sum()))
 
     logger.debug("\nSEED PAPERS: seed_papers.head()")
     logger.debug(seed_papers.head())

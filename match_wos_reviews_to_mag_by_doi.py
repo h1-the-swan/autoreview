@@ -19,11 +19,11 @@ import pandas as pd
 from dotenv import load_dotenv
 load_dotenv('admin.env')
 from mysql_connect import get_db_connection
-db = get_db_connection('mag_2017-10')
+db = get_db_connection('mag_20180329')
 
 def get_top_ef_in_result(df):
-    df = df.sort_values('EF', ascending=False)
-    if df.iloc[0].EF > df.iloc[1].EF:
+    df = df.sort_values('pagerank', ascending=False)
+    if df.iloc[0].pagerank > df.iloc[1].pagerank:
         return df.iloc[0]
     else:
         # give up
@@ -31,7 +31,7 @@ def get_top_ef_in_result(df):
 
 def query_mag_doi(doi):
     tbl1 = db.tables['Papers']
-    tbl2 = db.tables['rank']
+    tbl2 = db.tables['twolevel_cluster_relaxmap']
     j = tbl1.join(tbl2, tbl1.c.Paper_ID==tbl2.c.Paper_ID)
     sq = j.select(tbl1.c.DOI==doi)
     r = db.read_sql(sq)
@@ -56,7 +56,7 @@ def output_row(outf, wos_item, r, multiple_match_flag):
            str(wos_item.num_citations),
            str(r.date),
            r.title,
-           str(r.EF),
+           str(r.pagerank),
            str(multiple_match_flag)]
     outf.write("\t".join(row))
     outf.write("\n")
@@ -78,7 +78,7 @@ def main(args):
                   'wos_num_citations', 
                   'mag_date', 
                   'mag_title', 
-                  'mag_EF',
+                  'mag_pagerank',
                   'multiple_match_flag']
         outf.write("\t".join(header))
         outf.write("\n")

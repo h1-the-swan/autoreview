@@ -18,7 +18,9 @@ from dotenv import load_dotenv
 load_dotenv('admin.env')
 
 # from db_connect_mag import Session, Paper, PaperAuthorAffiliation
-from db_connect_mag import db
+# from db_connect_mag import db
+from mysql_connect import get_db_connection
+db = get_db_connection('mag_20180329')
 
 import logging
 logging.basicConfig(format='%(asctime)s %(name)s.%(lineno)d %(levelname)s : %(message)s',
@@ -76,12 +78,12 @@ def distances_two_groups(g1, g2):
 def collect_citing_and_cited(papers, collected=[], collected_ids=set(), counter=Counter()):
     ids_to_get = set()
     for i, paper in enumerate(papers):
-        citing_paper_ids = get_reference_ids(paper['Paper_ID'], direction='out')
+        citing_paper_ids = get_reference_ids(paper['Paper_ID'], direction='out', tablename='PaperReferences_out')
         for pid in citing_paper_ids:
             counter[pid] += 1
             if pid not in collected_ids:
                 ids_to_get.add(pid)
-        cited_paper_ids = get_reference_ids(paper['Paper_ID'], direction='in')
+        cited_paper_ids = get_reference_ids(paper['Paper_ID'], direction='in', tablename='PaperReferences_in')
         for pid in cited_paper_ids:
             counter[pid] += 1
             if pid not in collected_ids:
@@ -114,18 +116,19 @@ def get_reference_ids(paper_id, direction='out', tablename='PaperReferences', co
 
 def get_paper_as_dict(paper):
     tbl_papers = db.tables['Papers']
-    tbl_rank = db.tables['rank']
+    # tbl_rank = db.tables['rank']
+    tbl_rank = db.tables['twolevel_cluster_relaxmap']
     tbl_tree = db.tables['tree']
     paper_dict = {
         'Paper_ID': paper[tbl_papers.c['Paper_ID']],
         'title': paper[tbl_papers.c['title']],
         'year': paper[tbl_papers.c['year']],
-        'EF': paper[tbl_rank.c['EF']],
+        'EF': paper[tbl_rank.c['pagerank']],
         'cl': paper[tbl_tree.c['cl']]
     }
     return paper_dict
 
-def get_papers(paper_id_list, tablenames=['Papers', 'rank', 'tree'], id_colname='Paper_ID'):
+def get_papers(paper_id_list, tablenames=['Papers', 'twolevel_cluster_relaxmap', 'tree'], id_colname='Paper_ID'):
     tbls = [db.tables[tablename] for tablename in tablenames]
     first_tbl = tbls[0]
     j = first_tbl
@@ -157,7 +160,7 @@ def get_papers_and_save(review_paper_id, outdir='./', num_seed_papers=50, random
     review_paper = get_papers(parse_id(review_paper_id))[0]
     logger.debug("getting references from paper {} (Paper_ID {})".format(review_paper['title'], review_paper_id))
     start = timer()
-    reference_ids = get_reference_ids(review_paper_id, direction='out')
+    reference_ids = get_reference_ids(review_paper_id, direction='out', tablename='PaperReferences_out')
     reference_papers = get_papers(reference_ids)
     logger.debug("{} references found in {}".format(len(reference_papers), format_timespan(timer()-start)))
     seed_papers, target_papers = train_test_split(reference_papers, train_size=num_seed_papers, random_state=random_state)
@@ -198,6 +201,7 @@ def get_papers_and_save(review_paper_id, outdir='./', num_seed_papers=50, random
 
 
 
+    start = timer()
     logger.debug("getting citing and cited papers for {} papers...".format(len(test_papers)))
     cur_papers = list(test_papers)
     test_papers, test_paper_ids, c = collect_citing_and_cited(cur_papers, test_papers, test_paper_ids, c)

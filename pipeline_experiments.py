@@ -173,8 +173,7 @@ def year_lowpass_filter(df, year=None):
     return df
 
 
-def log_to_db(experiment, data_dir, review_id, seed):
-    session = Session()
+def log_to_db(session, experiment, data_dir, review_id, seed):
     d = PipelineTest()
     d.review_paper_id = review_id
     d.random_seed = seed
@@ -196,9 +195,10 @@ def log_to_db(experiment, data_dir, review_id, seed):
     d.score_correctly_predicted = experiment.score_correctly_predicted
 
     session.add(d)
-    session.commit()
+    session.flush()
+    rec_id = d.id
 
-    session.close()
+    return rec_id
 
 def quickcheck(args):
     # quick check to make sure train-test split is always the same
@@ -323,6 +323,8 @@ def main(args):
         best_model_dir = os.path.join(data_dir, "best_model_{:%Y%m%d%H%M%S%f}".format(datetime.now()))
         os.mkdir(best_model_dir)
         best_model_fname = os.path.join(best_model_dir, "best_model.pickle")
+    else:
+        best_model_fname = None
 
     best_score = 0
     for clf in clfs:
@@ -335,6 +337,17 @@ def main(args):
         logger.info("feature names: {}".format(feature_names))
         logger.info(experiment.pipeline._final_estimator)
         experiment.run(X, y, num_target=len(target_papers))
+
+        session = Session()
+        try:
+            db_rec_id = log_to_db(session, experiment, data_dir=data_dir, review_id=args.review_id, seed=args.dataset_seed)
+            session.commit()
+        except Exception as e:
+            logger.debug("Exception encountered when adding record to db! {}".format(e))
+            session.rollback()
+            db_rec_id = None
+        finally:
+            session.close()
         if experiment.score_correctly_predicted > best_score:
             best_score = experiment.score_correctly_predicted
             if args.save_best:
@@ -342,8 +355,19 @@ def main(args):
                 logger.debug("This is the best model so far. Saving to {}...".format(best_model_fname))
                 joblib.dump(experiment.pipeline, best_model_fname)
                 logger.debug("Saved model in {}".format(format_timespan(timer()-start)))
-        log_to_db(experiment, data_dir=data_dir, review_id=args.review_id, seed=args.dataset_seed)
+                best_rec_id = db_rec_id
         logger.info("\n")
+
+    if args.save_best:
+        logger.debug("best_rec_id: {}".format(best_rec_id))
+        session = Session()
+        d = session.query(PipelineTest).get(best_rec_id)
+        d.saved_model = best_model_fname
+
+        session.add(d)
+        session.commit()
+
+        session.close()
 
 if __name__ == "__main__":
     total_start = timer()

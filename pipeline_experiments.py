@@ -338,16 +338,17 @@ def main(args):
         logger.info(experiment.pipeline._final_estimator)
         experiment.run(X, y, num_target=len(target_papers))
 
-        session = Session()
-        try:
-            db_rec_id = log_to_db(session, experiment, data_dir=data_dir, review_id=args.review_id, seed=args.dataset_seed)
-            session.commit()
-        except Exception as e:
-            logger.debug("Exception encountered when adding record to db! {}".format(e))
-            session.rollback()
-            db_rec_id = None
-        finally:
-            session.close()
+        # turn off db logging for now
+        # session = Session()
+        # try:
+        #     db_rec_id = log_to_db(session, experiment, data_dir=data_dir, review_id=args.review_id, seed=args.dataset_seed)
+        #     session.commit()
+        # except Exception as e:
+        #     logger.debug("Exception encountered when adding record to db! {}".format(e))
+        #     session.rollback()
+        #     db_rec_id = None
+        # finally:
+        #     session.close()
         if experiment.score_correctly_predicted > best_score:
             best_score = experiment.score_correctly_predicted
             if args.save_best:
@@ -355,19 +356,19 @@ def main(args):
                 logger.debug("This is the best model so far. Saving to {}...".format(best_model_fname))
                 joblib.dump(experiment.pipeline, best_model_fname)
                 logger.debug("Saved model in {}".format(format_timespan(timer()-start)))
-                best_rec_id = db_rec_id
+                # best_rec_id = db_rec_id
         logger.info("\n")
 
-    if args.save_best:
-        logger.debug("best_rec_id: {}".format(best_rec_id))
-        session = Session()
-        d = session.query(PipelineTest).get(best_rec_id)
-        d.saved_model = best_model_fname
-
-        session.add(d)
-        session.commit()
-
-        session.close()
+    # if args.save_best:
+    #     logger.debug("best_rec_id: {}".format(best_rec_id))
+    #     session = Session()
+    #     d = session.query(PipelineTest).get(best_rec_id)
+    #     d.saved_model = best_model_fname
+    #
+    #     session.add(d)
+    #     session.commit()
+    #
+    #     session.close()
 
 if __name__ == "__main__":
     total_start = timer()

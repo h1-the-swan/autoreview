@@ -149,20 +149,8 @@ def get_papers(paper_id_list, tablenames=['Papers', 'twolevel_cluster_relaxmap',
         i = i + step
     return all_results
 
-def get_papers_and_save(review_paper_id, outdir='./', num_seed_papers=50, random_state=999):
-    if isinstance(random_state, np.random.RandomState):
-        pass
-    elif isinstance(random_state, int):
-        random_state = np.random.RandomState(random_state)
-    else:
-        raise RuntimeError('argument random_state must be type np.random.RandomState or integer')
-
-    review_paper = get_papers(parse_id(review_paper_id))[0]
-    logger.debug("getting references from paper {} (Paper_ID {})".format(review_paper['title'], review_paper_id))
-    start = timer()
-    reference_ids = get_reference_ids(review_paper_id, direction='out', tablename='PaperReferences_out')
-    reference_papers = get_papers(reference_ids)
-    logger.debug("{} references found in {}".format(len(reference_papers), format_timespan(timer()-start)))
+def _get_papers_and_save_from_id_list(id_list, outdir='./', num_seed_papers=50, random_state=999):
+    reference_papers = get_papers(id_list)
     seed_papers, target_papers = train_test_split(reference_papers, train_size=num_seed_papers, random_state=random_state)
 
     outfname = os.path.join(outdir, "seed_papers.pickle")
@@ -217,6 +205,20 @@ def get_papers_and_save(review_paper_id, outdir='./', num_seed_papers=50, random
     logger.debug("saving {} papers to {}".format(len(test_papers), outfname))
     pickle_dataframe_from_papers(test_papers, outfname)
     logger.debug("done saving. took {}".format(format_timespan(timer()-start)))
+
+def get_papers_and_save(review_paper_id, outdir='./', num_seed_papers=50, random_state=999):
+    if isinstance(random_state, np.random.RandomState):
+        pass
+    elif isinstance(random_state, int):
+        random_state = np.random.RandomState(random_state)
+    else:
+        raise RuntimeError('argument random_state must be type np.random.RandomState or integer')
+
+    review_paper = get_papers(parse_id(review_paper_id))[0]
+    logger.debug("getting references from paper {} (Paper_ID {})".format(review_paper['title'], review_paper_id))
+    start = timer()
+    reference_ids = get_reference_ids(review_paper_id, direction='out', tablename='PaperReferences_out')
+    _get_papers_and_save_from_id_list(reference_ids, outdir, num_seed_papers, random_state)
 
 def main(args):
 

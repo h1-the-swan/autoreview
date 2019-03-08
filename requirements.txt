@@ -16,8 +16,8 @@ jupyter-core==4.4.0
 kiwisolver==1.0.1
 matplotlib==2.2.2
 -e git://github.com/h1-the-swan/mysql_connect.git@cb225c6d4f1c14bcd9275f1e934d6a007d576f97#egg=mysql_connect
-numpy==1.14.3
-pandas==0.22.0
+numpy==1.16.1
+pandas==0.24.0
 parso==0.1.1
 pexpect==4.4.0
 pickleshare==0.7.4
@@ -26,15 +26,15 @@ ptyprocess==0.5.2
 Pygments==2.2.0
 PyMySQL==0.8.0
 pyparsing==2.2.0
-python-dateutil==2.7.2
+python-dateutil==2.7.5
 python-dotenv==0.8.2
-pytz==2018.4
+pytz==2018.9
 pyzmq==17.0.0
 requests==2.18.4
 scikit-learn==0.19.1
 scipy==1.0.1
 simplegeneric==0.8.1
-six==1.11.0
+six==1.12.0
 sklearn==0.0
 SQLAlchemy==1.2.7
 tornado==5.0.2

@@ -37,9 +37,12 @@ class Autoreview(object):
         """Run and save output
 
         """
-        prepare_directory(self.outdir)
+        try:
+            prepare_directory(self.outdir)
 
-        seed_papers, target_papers = train_test_split(self.id_list, train_size=self.sample_size, random_state=self.random_state)
+            seed_papers, target_papers = train_test_split(self.id_list, train_size=self.sample_size, random_state=self.random_state)
 
-        sdf_papers = load_spark_dataframe(self.papers, self.spark) 
+            sdf_papers = load_spark_dataframe(self.papers, self.spark) 
         
+        finally:
+            self._config.teardown()

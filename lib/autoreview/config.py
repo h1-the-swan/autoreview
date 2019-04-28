@@ -29,8 +29,8 @@ class Config(object):
         for var in OPTIONAL_VARS:
             setattr(self, var, os.environ.get(var, default=None))
             
-        self.PATH_TO_PAPER_DATA = path_to_paper_data or os.environ.get('DEFAULT_PAPER_DATA')
-        self.PATH_TO_CITATION_DATA = path_to_citation_data or os.environ.get('DEFAULT_PAPER_CITATION_DATA')
+        self.PATH_TO_PAPER_DATA = path_to_paper_data or os.environ.get('DEFAULT_PAPER_DATA', "")
+        self.PATH_TO_CITATION_DATA = path_to_citation_data or os.environ.get('DEFAULT_PAPER_CITATION_DATA', "")
 
         self._mysql_db = None
         self._spark = None

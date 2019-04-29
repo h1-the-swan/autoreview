@@ -29,7 +29,9 @@ def get_id_list(fname):
     id_list = []
     with open(fname, 'r') as f:
         for line in f:
-            id_list.append(line.strip())
+            line = line.strip()
+            if line:
+                id_list.append(line)
     return id_list
 
 

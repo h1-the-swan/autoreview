@@ -126,8 +126,12 @@ class Autoreview(object):
             # do it all again to get second degree
             sdf_combined = self.follow_citations(sdf_combined, sdf_citations)
 
+            outfname = os.path.join(self.outdir, 'test_papers.pickle')
+            logger.debug("saving test papers to {}".format(outfname))
+            start = timer()
             df_combined = sdf_combined.join(sdf_papers, on='ID', how='inner').toPandas()
-            save_pandas_dataframe_to_pickle(df_combined, os.path.join(self.outdir, 'TESTTESTPAPERS.pickle'))
+            save_pandas_dataframe_to_pickle(df_combined, outfname)
+            logger.debug("done saving test papers. took {}".format(format_timespan(timer()-start)))
         
         finally:
             self._config.teardown()

@@ -21,7 +21,9 @@ logging.basicConfig(format='%(asctime)s %(name)s.%(lineno)d %(levelname)s : %(me
 # logger = logging.getLogger(__name__)
 logger = logging.getLogger('__main__').getChild(__name__)
 
+sys.path.append('..')
 from autoreview import Autoreview
+
 
 def get_id_list(fname):
     """Get a list of IDs from a newline separated file
@@ -39,10 +41,12 @@ def main(args):
     id_list = get_id_list(args.id_list)
     a = Autoreview(id_list=id_list,
                     citations=args.citations,
-                    papers=args.papers
-                    outdir=args.outdir
-                    sample_size=args.sample_size
-                    random_seed=args.random_seed)
+                    papers=args.papers,
+                    outdir=args.outdir,
+                    sample_size=args.sample_size,
+                    random_seed=args.random_seed,
+                    id_colname=args.id_colname,
+                    cited_colname=args.cited_colname)
     a.run()
 
 if __name__ == "__main__":
@@ -58,6 +62,8 @@ if __name__ == "__main__":
     parser.add_argument("--outdir", help="output directory (will be created)")
     parser.add_argument("--sample-size", type=int, default=200, help="number of articles to sample from the set to use to train the model (integer, default: 200)")
     parser.add_argument("--random-seed", type=int, default=999, help="random seed (integer, default: 999)")
+    parser.add_argument("--id-colname", default='UID', help="column name for paper id (default: \"UID\")")
+    parser.add_argument("--cited-colname", default='cited_UID', help="column name for cited paper id (default: \"cited_UID\")")
     parser.add_argument("--debug", action='store_true', help="output debugging info")
     global args
     args = parser.parse_args()

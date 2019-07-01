@@ -8,3 +8,5 @@ __pycache__/
 *.log
 *.pyc
 data/
+Untitled*.ipynb
+reload_model_misinfo*

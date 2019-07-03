@@ -17,7 +17,7 @@ except ImportError:
         return "{:.2f} seconds".format(seconds)
 
 from .config import Config
-from .util import load_random_state, prepare_directory, load_spark_dataframe, save_pandas_dataframe_to_pickle, remove_seed_papers_from_test_set, remove_missing_titles, year_lowpass_filter
+from .util import load_random_state, prepare_directory, load_spark_dataframe, save_pandas_dataframe_to_pickle, remove_seed_papers_from_test_set, remove_missing_titles, year_lowpass_filter, predict_ranks_from_data
 
 import numpy as np
 import pandas as pd
@@ -71,6 +71,8 @@ class Autoreview(object):
             self._config = Config()
         self.spark = self._config.spark
 
+        self.best_model_pipeline_experiment = None
+
     def follow_citations(self, sdf, sdf_citations):
         """follow in- and out-citations
 
@@ -114,6 +116,7 @@ class Autoreview(object):
 
         sdf_papers = load_spark_dataframe(self.papers, self.spark) 
         sdf_papers = sdf_papers.withColumnRenamed(self.id_colname, 'ID')
+        sdf_papers = sdf_papers.dropna(subset=['cl'])
 
         sdf_seed = self.spark.createDataFrame(seed_papers[['ID']])
         sdf_target = self.spark.createDataFrame(target_papers[['ID']])
@@ -249,9 +252,15 @@ class Autoreview(object):
                     joblib.dump(experiment.pipeline, best_model_fname)
                     logger.debug("Saved model in {}".format(format_timespan(timer()-start)))
                     # best_rec_id = db_rec_id
+                    self.best_model_pipeline_experiment = experiment
                 logger.info("\n")
 
-
-        
+            logger.info("Done with experiments. Using best model: {}".format(self.best_model_pipeline_experiment.pipeline._final_estimator))
+            logger.info("Scoring all test papers...")
+            df_predictions = predict_ranks_from_data(self.best_model_pipeline_experiment.pipeline, test_papers)
+            df_predictions = df_predictions[df_predictions.target==False].drop(columns='target')
+            outfname = os.path.join(self.outdir, 'predictions.tsv')
+            df_predictions.head(100).to_csv(outfname, sep='\t')
+            
         finally:
             self._config.teardown()

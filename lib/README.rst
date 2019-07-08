@@ -7,6 +7,8 @@ Starting with a list of seed papers, get candidate papers by following in- and o
 Then, train a classifier to rank the candidate papers.
 Repeat this a number of times to get an aggregate ranking for many candidate papers.
 
+Example script in `scripts/run_autoreview.py`
+
 Inputs:
 - List of paper IDs for the seed set.
 - Data for paper citations.

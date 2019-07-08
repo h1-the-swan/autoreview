@@ -113,6 +113,6 @@ class PipelineExperiment(object):
         self.num_target_papers = int(num_target)
         logger.info("TOP PREDICTIONS: True is count of target papers in the top predicted")
         logger.info(self.top_predictions(n=num_target))
-        self.score_correctly_predicted = self.num_correctly_predicted / self.num_target_papers
+        self.score_correctly_predicted = self.num_correctly_predicted / self.num_target_papers  # R-Precision score
 
 

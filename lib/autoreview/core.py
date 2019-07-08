@@ -200,21 +200,12 @@ class Autoreview(object):
                 ])),
             ]
 
-            # # if command line option is set, include a feature for similarity of titles
-            # if args.titles_cossim:
+            # include a feature for similarity of titles
             transformer_list.append(
                 ('avg_title_tfidf_cosine_similarity', Pipeline([
                     ('title_feat', AverageTfidfCosSimTransformer(seed_papers=seed_papers, colname='title')),
                 ]))
             )
-
-            # if args.save_best:
-            #     from sklearn.externals import joblib
-            #     best_model_dir = os.path.join(data_dir, "best_model_{:%Y%m%d%H%M%S%f}".format(datetime.now()))
-            #     os.mkdir(best_model_dir)
-            #     best_model_fname = os.path.join(best_model_dir, "best_model.pickle")
-            # else:
-            #     best_model_fname = None
 
             from sklearn.externals import joblib
             best_model_dir = os.path.join(self.outdir, "best_model_{:%Y%m%d%H%M%S%f}".format(datetime.now()))

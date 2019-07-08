@@ -16,7 +16,7 @@ setup(
     version='0.1.0',
     description='Library for ranking relevant papers based on a set of seed papers',
     long_description=readme,
-    author='Kenneth Reitz',
+    author='Jason Portenoy',
     author_email='jporteno@uw.edu',
     url='',
     license=license,

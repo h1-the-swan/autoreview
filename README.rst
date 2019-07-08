@@ -1,6 +1,9 @@
 Automated Lit Review
 ========================
 
+Jason Portenoy
+2018
+
 Library structure is based on https://github.com/kennethreitz/samplemod.
 
 Starting with a list of seed papers, get candidate papers by following in- and out-citations (2 degrees).

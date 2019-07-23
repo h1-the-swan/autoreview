@@ -21,7 +21,6 @@ logging.basicConfig(format='%(asctime)s %(name)s.%(lineno)d %(levelname)s : %(me
 # logger = logging.getLogger(__name__)
 logger = logging.getLogger('__main__').getChild(__name__)
 
-sys.path.append('..')
 from autoreview import Autoreview
 
 

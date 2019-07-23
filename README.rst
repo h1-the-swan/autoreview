@@ -11,15 +11,18 @@ Repeat this a number of times to get an aggregate ranking for many candidate pap
 Example script in ``scripts/run_autoreview.py``
 
 Inputs:
+
 - List of paper IDs for the seed set.
 - Data for paper citations.
 - Paper data to be used as features for the classifiers (e.g., clusters, eigenfactor, titles, etc.)
 
 Parameters:
+
 - Size of the initial split
 - Number of times to perform the overall process of collecting candidate papers and training a classifier
 
 Output:
+
 - List of papers not in the seed set, ordered descending by relevance score.
 
 Example
@@ -28,6 +31,7 @@ Example
 - Apache Spark (https://spark.apache.org/downloads.html) must be installed to run the example.
 
 - The environment variable ``SPARK_HOME`` must be set (preferably in a ``.env`` file) with the path to Spark.
+
   + Example ``.env`` file::
 
         SPARK_HOME=/home/spark-2.4.0-bin-hadoop2.7

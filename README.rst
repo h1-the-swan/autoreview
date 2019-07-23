@@ -32,9 +32,12 @@ Example
 
 - The environment variable ``SPARK_HOME`` must be set (preferably in a ``.env`` file) with the path to Spark.
 
+  + Java version 8 is required to be used with Spark. Make sure Java 8 is installed and point to its path with the environment variable ``JAVA_HOME``.
+
   + Example ``.env`` file::
 
         SPARK_HOME=/home/spark-2.4.0-bin-hadoop2.7
+        JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 
 - Create a virtual environment and install the required libraries::
 

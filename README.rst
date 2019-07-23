@@ -4,13 +4,11 @@ Automated Lit Review
 Jason Portenoy
 2018
 
-Library structure is based on https://github.com/kennethreitz/samplemod.
-
 Starting with a list of seed papers, get candidate papers by following in- and out-citations (2 degrees).
 Then, train a classifier to rank the candidate papers.
 Repeat this a number of times to get an aggregate ranking for many candidate papers.
 
-Example script in `scripts/run_autoreview.py`
+Example script in ``scripts/run_autoreview.py``
 
 Inputs:
 - List of paper IDs for the seed set.
@@ -23,3 +21,28 @@ Parameters:
 
 Output:
 - List of papers not in the seed set, ordered descending by relevance score.
+
+Example
+========
+
+- Apache Spark (https://spark.apache.org/downloads.html) must be installed to run the example.
+
+- The environment variable ``SPARK_HOME`` must be set (preferably in a ``.env`` file) with the path to Spark.
+  + Example ``.env`` file::
+
+        SPARK_HOME=/home/spark-2.4.0-bin-hadoop2.7
+
+- Create a virtual environment and install the required libraries::
+
+        virtualenv venv
+        source venv/bin/activate
+        pip install -r requirements.txt
+
+- Run the full autoreview pipeline using sample data::
+
+        python scripts/run_autoreview.py --id-list sample_data/sample_IDs_MAG.txt --citations sample_data/MAG_citations_sample --papers sample_data/MAG_papers_sample --sample-size 15 --random-seed 999 --id-colname Paper_ID --cited-colname Paper_reference_ID --outdir sample_data/sample_output --debug
+
+- This is just meant to show how the system operates. It will not provide meaningful results with such a small sample of paper and citation data.
+
+- It will output the top predictions in ``sample_data/sample_output/predictions.tsv``.
+

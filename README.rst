@@ -4,6 +4,13 @@ Automated Lit Review
 Jason Portenoy
 2018
 
+This is code and sample data accompanying the paper:
+
+`Supervised Learning for Automated Literature Review <http://ceur-ws.org/Vol-2414/paper8.pdf>`_
+
+published in the proceedings of the 4th Joint Workshop on Bibliometric-enhanced Information Retrieval and Natural Language Processing for Digital Libraries (BIRNDL 2019)
+co-located with the 42nd International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR 2019) 
+
 Starting with a list of seed papers, get candidate papers by following in- and out-citations (2 degrees).
 Then, train a classifier to rank the candidate papers.
 Repeat this a number of times to get an aggregate ranking for many candidate papers.

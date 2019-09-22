@@ -245,8 +245,16 @@ class Autoreview(object):
                     # best_rec_id = db_rec_id
                     self.best_model_pipeline_experiment = experiment
                 logger.info("\n")
+            if best_score == 0:
+                logger.info("None of the models scored higher than 0. Saving last model to {}...".format(best_model_fname))
+                start = timer()
+                joblib.dump(experiment.pipeline, best_model_fname)
+                logger.debug("Saved model in {}".format(format_timespan(timer()-start)))
+                # best_rec_id = db_rec_id
+                self.best_model_pipeline_experiment = experiment
+            else:
+                logger.info("Done with experiments. Using best model: {}".format(self.best_model_pipeline_experiment.pipeline._final_estimator))
 
-            logger.info("Done with experiments. Using best model: {}".format(self.best_model_pipeline_experiment.pipeline._final_estimator))
             logger.info("Scoring all test papers...")
             df_predictions = predict_ranks_from_data(self.best_model_pipeline_experiment.pipeline, test_papers)
             df_predictions = df_predictions[df_predictions.target==False].drop(columns='target')

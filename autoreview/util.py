@@ -139,14 +139,15 @@ def get_year_from_datadir(datadir):
     year = mag_date.year
     return year
 
-def get_best_model_path(datadir):
-    g = glob(os.path.join(datadir, 'best_model*'))
-    g.sort()
-    best_model_dirname = g[-1]
-    return os.path.join(best_model_dirname, 'best_model.pickle')
-
-def get_best_model_from_datadir(datadir):
-    return joblib.load(get_best_model_path(datadir))
+# these are broken. the best model isn't necessarily the most recent
+# def get_best_model_path(datadir):
+#     g = glob(os.path.join(datadir, 'best_model*'))
+#     g.sort()
+#     best_model_dirname = g[-1]
+#     return os.path.join(best_model_dirname, 'best_model.pickle')
+#
+# def get_best_model_from_datadir(datadir):
+#     return joblib.load(get_best_model_path(datadir))
 
 def predict_ranks_from_data(pipeline, df):
     start = timer()

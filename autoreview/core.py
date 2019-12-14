@@ -41,28 +41,27 @@ class Autoreview(object):
 
     """Toplevel Autoreview object"""
 
-    def __init__(self, id_list, citations, papers, outdir, sample_size, random_seed=None, id_colname='UID', citing_colname=None, cited_colname='cited_UID', config=None):
+    def __init__(self, outdir, id_list=None, citations=None, papers=None, sample_size=None, random_seed=None, id_colname='UID', citing_colname=None, cited_colname='cited_UID', config=None):
         """
+        :outdir: output directory.
+        :random_seed: integer
+
+        The following are needed for collecting the paper sets.
+        They can either be set on initialization, or using prepare_for_collection()
         :id_list: list of strings: IDs for the seed set
         :citations: path to citations data
         :papers: path to papers data
-        :outdir: output directory. will raise RuntimeError if the directory already exists
         :sample_size: integer: size of the seed set to split off from the initial. the rest will be used as target papers
-        :random_seed: integer
+        :id_colname: default is 'UID'
+        :citing_colname: default is 'UID'
+        :cited_colname: default is 'cited_UID'
 
         """
-        self.id_list = id_list
-        self.citations = citations
-        self.papers = papers
         self.outdir = outdir
-        self.sample_size = sample_size
         self.random_state = load_random_state(random_seed)
-        self.id_colname = id_colname
-        if citing_colname is not None:
-            self.citing_colname = citing_colname
-        else:
-            self.citing_colname = id_colname
-        self.cited_colname = cited_colname
+
+        self.prepare_for_collection(id_list, citations, papers, sample_size, id_colname, citing_colname, cited_colname)
+        # if these are unspecified, the user will have to overwrite them later by calling prepare_for_collection() manually
 
         if config is not None:
             assert isinstance(config, Config)
@@ -72,6 +71,29 @@ class Autoreview(object):
         self.spark = self._config.spark
 
         self.best_model_pipeline_experiment = None
+
+    def prepare_for_collection(self, id_list, citations, papers, sample_size, id_colname='UID', citing_colname=None, cited_colname='cited_UID'):
+        """Provide arguments for paper collection (use this if these arguments were not already provided at initialization)
+
+        :id_list: list of strings: IDs for the seed set
+        :citations: path to citations data
+        :papers: path to papers data
+        :sample_size: integer: size of the seed set to split off from the initial. the rest will be used as target papers
+        :id_colname: default is 'UID'
+        :citing_colname: default is 'UID'
+        :cited_colname: default is 'cited_UID'
+
+        """
+        self.id_list = id_list
+        self.citations = citations
+        self.papers = papers
+        self.sample_size = sample_size
+        self.id_colname = id_colname
+        if citing_colname is not None:
+            self.citing_colname = citing_colname
+        else:
+            self.citing_colname = id_colname
+        self.cited_colname = cited_colname
 
     def follow_citations(self, sdf, sdf_citations):
         """follow in- and out-citations
@@ -151,6 +173,116 @@ class Autoreview(object):
         logger.debug("done saving test papers. took {}".format(format_timespan(timer()-start)))
         return df_seed, df_target, df_combined  # seed, target, test (candidate) papers
 
+    def train_models(self, seed_papers, target_papers, candidate_papers):
+        """train models one by one, find the one with the best score
+
+        :seed_papers: pandas dataframe
+        :target_papers: pandas dataframe
+        :candidate_papers: pandas dataframe
+        :returns: TODO
+
+        """
+        test_papers = remove_seed_papers_from_test_set(candidate_papers, seed_papers)
+        target_ids = set(target_papers.Paper_ID)
+        test_papers['target'] = test_papers.Paper_ID.apply(lambda x: x in target_ids)
+        test_papers = remove_missing_titles(test_papers)
+        # TODO IMPLEMENT YEAR LOWPASS FILTER
+        # test_papers = year_lowpass_filter(test_papers, year=args.year)
+        logger.debug("There are {} target papers. {} of these appear in the haystack.".format(target_papers.Paper_ID.nunique(), test_papers['target'].sum()))
+
+        logger.debug("\nSEED PAPERS: seed_papers.head()")
+        logger.debug(seed_papers.head())
+        logger.debug("\nTARGET PAPERS: target_papers.head()")
+        logger.debug(target_papers.head())
+
+        X = test_papers.reset_index()
+        y = X['target']
+        clfs = [
+            LogisticRegression(random_state=self.random_state),
+            LogisticRegression(random_state=self.random_state, class_weight='balanced'),
+            LogisticRegression(random_state=self.random_state, penalty='l1'),
+            # SVC(probability=True, random_state=args.seed),  # this one doesn't perform well
+            # SVC(probability=True, random_state=args.seed, class_weight='balanced'),  # this one takes a long time (8hours?)
+            SVC(kernel='linear', probability=True, random_state=self.random_state),
+            SGDClassifier(loss='modified_huber', random_state=self.random_state),
+            GaussianNB(),
+            RandomForestClassifier(n_estimators=50, random_state=self.random_state),
+            RandomForestClassifier(n_estimators=100, random_state=self.random_state),
+            RandomForestClassifier(n_estimators=500, random_state=self.random_state),
+            RandomForestClassifier(n_estimators=100, criterion="entropy", random_state=self.random_state),
+            RandomForestClassifier(n_estimators=500, criterion="entropy", random_state=self.random_state),
+            AdaBoostClassifier(n_estimators=500, random_state=self.random_state),
+        ]
+        transformer_list = [
+            ('avg_distance_to_train', Pipeline([
+                ('cl_feat', ClusterTransformer(seed_papers=seed_papers)),
+            ])),
+            ('ef', Pipeline([
+                ('ef_feat', DataFrameColumnTransformer('EF')),
+            ])),
+        ]
+
+        # include a feature for similarity of titles
+        transformer_list.append(
+            ('avg_title_tfidf_cosine_similarity', Pipeline([
+                ('title_feat', AverageTfidfCosSimTransformer(seed_papers=seed_papers, colname='title')),
+            ]))
+        )
+
+        from sklearn.externals import joblib
+        best_model_dir = os.path.join(self.outdir, "best_model_{:%Y%m%d%H%M%S%f}".format(datetime.now()))
+        os.mkdir(best_model_dir)
+        best_model_fname = os.path.join(best_model_dir, "best_model.pickle")
+
+        best_score = 0
+        for clf in clfs:
+            experiment = PipelineExperiment(clf, transformer_list, seed_papers, random_state=self.random_state)
+            logger.info("\n========Pipeline:")
+            # logger.info(experiment.pipeline.steps)
+            # feature_union = experiment.pipeline.named_steps.get('union')
+            # feature_names = [item[0] for item in feature_union.transformer_list]
+            feature_names = [item[0] for item in transformer_list]
+            logger.info("feature names: {}".format(feature_names))
+            logger.info(experiment.pipeline._final_estimator)
+            experiment.run(X, y, num_target=len(target_papers))
+
+            # turn off db logging for now
+            # session = Session()
+            # try:
+            #     db_rec_id = log_to_db(session, experiment, data_dir=data_dir, review_id=args.review_id, seed=args.dataset_seed)
+            #     session.commit()
+            # except Exception as e:
+            #     logger.debug("Exception encountered when adding record to db! {}".format(e))
+            #     session.rollback()
+            #     db_rec_id = None
+            # finally:
+            #     session.close()
+            if experiment.score_correctly_predicted > best_score:
+                best_score = experiment.score_correctly_predicted
+                # if args.save_best:
+                start = timer()
+                logger.debug("This is the best model so far. Saving to {}...".format(best_model_fname))
+                joblib.dump(experiment.pipeline, best_model_fname)
+                logger.debug("Saved model in {}".format(format_timespan(timer()-start)))
+                # best_rec_id = db_rec_id
+                self.best_model_pipeline_experiment = experiment
+            logger.info("\n")
+        if best_score == 0:
+            logger.info("None of the models scored higher than 0. Saving last model to {}...".format(best_model_fname))
+            start = timer()
+            joblib.dump(experiment.pipeline, best_model_fname)
+            logger.debug("Saved model in {}".format(format_timespan(timer()-start)))
+            # best_rec_id = db_rec_id
+            self.best_model_pipeline_experiment = experiment
+        else:
+            logger.info("Done with experiments. Using best model: {}".format(self.best_model_pipeline_experiment.pipeline._final_estimator))
+
+        logger.info("Scoring all test papers...")
+        df_predictions = predict_ranks_from_data(self.best_model_pipeline_experiment.pipeline, test_papers)
+        df_predictions = df_predictions[df_predictions.target==False].drop(columns='target')
+        outfname = os.path.join(self.outdir, 'predictions.tsv')
+        df_predictions.head(100).to_csv(outfname, sep='\t')
+
 
     def run(self):
         """Run and save output
@@ -160,106 +292,7 @@ class Autoreview(object):
             prepare_directory(self.outdir)
             seed_papers, target_papers, candidate_papers = self.get_papers_2_degrees_out()
 
-            test_papers = remove_seed_papers_from_test_set(candidate_papers, seed_papers)
-            target_ids = set(target_papers.Paper_ID)
-            test_papers['target'] = test_papers.Paper_ID.apply(lambda x: x in target_ids)
-            test_papers = remove_missing_titles(test_papers)
-            # TODO IMPLEMENT YEAR LOWPASS FILTER
-            # test_papers = year_lowpass_filter(test_papers, year=args.year)
-            logger.debug("There are {} target papers. {} of these appear in the haystack.".format(target_papers.Paper_ID.nunique(), test_papers['target'].sum()))
+            self.train_models(seed_papers, target_papers, candidate_papers)
 
-            logger.debug("\nSEED PAPERS: seed_papers.head()")
-            logger.debug(seed_papers.head())
-            logger.debug("\nTARGET PAPERS: target_papers.head()")
-            logger.debug(target_papers.head())
-
-            X = test_papers.reset_index()
-            y = X['target']
-            clfs = [
-                LogisticRegression(random_state=self.random_state),
-                LogisticRegression(random_state=self.random_state, class_weight='balanced'),
-                LogisticRegression(random_state=self.random_state, penalty='l1'),
-                # SVC(probability=True, random_state=args.seed),  # this one doesn't perform well
-                # SVC(probability=True, random_state=args.seed, class_weight='balanced'),  # this one takes a long time (8hours?)
-                SVC(kernel='linear', probability=True, random_state=self.random_state),
-                SGDClassifier(loss='modified_huber', random_state=self.random_state),
-                GaussianNB(),
-                RandomForestClassifier(n_estimators=50, random_state=self.random_state),
-                RandomForestClassifier(n_estimators=100, random_state=self.random_state),
-                RandomForestClassifier(n_estimators=500, random_state=self.random_state),
-                RandomForestClassifier(n_estimators=100, criterion="entropy", random_state=self.random_state),
-                RandomForestClassifier(n_estimators=500, criterion="entropy", random_state=self.random_state),
-                AdaBoostClassifier(n_estimators=500, random_state=self.random_state),
-            ]
-            transformer_list = [
-                ('avg_distance_to_train', Pipeline([
-                    ('cl_feat', ClusterTransformer(seed_papers=seed_papers)),
-                ])),
-                ('ef', Pipeline([
-                    ('ef_feat', DataFrameColumnTransformer('EF')),
-                ])),
-            ]
-
-            # include a feature for similarity of titles
-            transformer_list.append(
-                ('avg_title_tfidf_cosine_similarity', Pipeline([
-                    ('title_feat', AverageTfidfCosSimTransformer(seed_papers=seed_papers, colname='title')),
-                ]))
-            )
-
-            from sklearn.externals import joblib
-            best_model_dir = os.path.join(self.outdir, "best_model_{:%Y%m%d%H%M%S%f}".format(datetime.now()))
-            os.mkdir(best_model_dir)
-            best_model_fname = os.path.join(best_model_dir, "best_model.pickle")
-
-            best_score = 0
-            for clf in clfs:
-                experiment = PipelineExperiment(clf, transformer_list, seed_papers, random_state=self.random_state)
-                logger.info("\n========Pipeline:")
-                # logger.info(experiment.pipeline.steps)
-                # feature_union = experiment.pipeline.named_steps.get('union')
-                # feature_names = [item[0] for item in feature_union.transformer_list]
-                feature_names = [item[0] for item in transformer_list]
-                logger.info("feature names: {}".format(feature_names))
-                logger.info(experiment.pipeline._final_estimator)
-                experiment.run(X, y, num_target=len(target_papers))
-
-                # turn off db logging for now
-                # session = Session()
-                # try:
-                #     db_rec_id = log_to_db(session, experiment, data_dir=data_dir, review_id=args.review_id, seed=args.dataset_seed)
-                #     session.commit()
-                # except Exception as e:
-                #     logger.debug("Exception encountered when adding record to db! {}".format(e))
-                #     session.rollback()
-                #     db_rec_id = None
-                # finally:
-                #     session.close()
-                if experiment.score_correctly_predicted > best_score:
-                    best_score = experiment.score_correctly_predicted
-                    # if args.save_best:
-                    start = timer()
-                    logger.debug("This is the best model so far. Saving to {}...".format(best_model_fname))
-                    joblib.dump(experiment.pipeline, best_model_fname)
-                    logger.debug("Saved model in {}".format(format_timespan(timer()-start)))
-                    # best_rec_id = db_rec_id
-                    self.best_model_pipeline_experiment = experiment
-                logger.info("\n")
-            if best_score == 0:
-                logger.info("None of the models scored higher than 0. Saving last model to {}...".format(best_model_fname))
-                start = timer()
-                joblib.dump(experiment.pipeline, best_model_fname)
-                logger.debug("Saved model in {}".format(format_timespan(timer()-start)))
-                # best_rec_id = db_rec_id
-                self.best_model_pipeline_experiment = experiment
-            else:
-                logger.info("Done with experiments. Using best model: {}".format(self.best_model_pipeline_experiment.pipeline._final_estimator))
-
-            logger.info("Scoring all test papers...")
-            df_predictions = predict_ranks_from_data(self.best_model_pipeline_experiment.pipeline, test_papers)
-            df_predictions = df_predictions[df_predictions.target==False].drop(columns='target')
-            outfname = os.path.join(self.outdir, 'predictions.tsv')
-            df_predictions.head(100).to_csv(outfname, sep='\t')
-            
         finally:
             self._config.teardown()

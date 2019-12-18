@@ -2,7 +2,7 @@
 
 DESCRIPTION = """Given a paper ID, get all of the outgoing references, then collect seed, target, and candidate sets for different random seeds based on those references."""
 
-import sys, os, time
+import sys, os, time, shutil
 from pathlib import Path
 from datetime import datetime
 from timeit import default_timer as timer
@@ -79,15 +79,20 @@ class PaperCollector(object):
             reference_ids = self.get_reference_ids(self.paper_id)
             outfile = self.outdir.joinpath('reference_ids.csv')
             logger.debug("writing {} reference ids to {}".format(len(reference_ids), outfile))
-            logfile.write("writing {} reference ids to {}".format(len(reference_ids), outfile))
+            logfile.write("writing {} reference ids to {}\n".format(len(reference_ids), outfile))
             outfile.write_text("\n".join(reference_ids))
 
             # collect paper sets for each random seed (1-5):
             for random_seed in range(1, 6):
                 this_outdir = self.outdir.joinpath('seed{:03d}'.format(random_seed))
                 if this_outdir.is_dir():
-                    logfile.write("directory {} exists. skipping".format(this_outdir))
-                    continue
+                    if this_outdir.joinpath('._COMPLETE').exists():
+                        logfile.write("directory {} exists and collection has already completed. skipping.\n".format(this_outdir))
+                        logger.debug("skipping directory {}".format(this_outdir))
+                        continue
+                    else:
+                        logfile.write("directory {} exists but collection did not complete. deleting this directory and continuing with collection.\n".format(this_outdir))
+                        shutil.rmtree(this_outdir)
                 this_outdir.mkdir()
                 logger.debug("collecting papers to go in {}".format(this_outdir))
                 logfile.write("collecting papers to go in {}\n".format(this_outdir))
@@ -101,6 +106,7 @@ class PaperCollector(object):
                                 cited_colname=self.cited_colname,
                                 config=self._config)
                 a.get_papers_2_degrees_out()
+                this_outdir.joinpath('._COMPLETE').touch()
 
             logfile.write("\n{} - COLLECTION COMPLETED\n".format(datetime.now()))
         finally:

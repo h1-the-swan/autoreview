@@ -171,18 +171,22 @@ class Autoreview(object):
         save_pandas_dataframe_to_pickle(df_target, outfname)
         logger.debug("done saving target papers. took {}".format(format_timespan(timer()-start)))
 
+        outfname = os.path.join(self.outdir, 'test_papers.pickle')
+        logger.debug("saving test papers to {}".format(outfname))
+
         df_citations = load_pandas_dataframe(self.citations)
         df_citations = df_citations.rename(columns={self.citing_colname: 'ID', self.cited_colname: 'cited_ID'}, errors='raise')
         df_citations['ID'] = df_citations['ID'].astype(str)
         df_citations['cited_ID'] = df_citations['cited_ID'].astype(str)
 
         # collect IDs for in- and out-citations
+        logger.debug("Following in- and out-citations (first degree)")
         df_combined = self.follow_citations(df_seed[['ID']], df_citations, use_spark=False)
         # do it all again to get second degree
+        logger.debug("Following in- and out-citations (second degree)")
         df_combined = self.follow_citations(df_combined, df_citations, use_spark=False)
-        outfname = os.path.join(self.outdir, 'test_papers.pickle')
-        logger.debug("saving test papers to {}".format(outfname))
         start = timer()
+        logger.debug("Merging paper info...")
         df_combined = df_combined.merge(df_papers, on='ID', how='inner')
         save_pandas_dataframe_to_pickle(df_combined, outfname)
         logger.debug("done saving test papers. took {}".format(format_timespan(timer()-start)))

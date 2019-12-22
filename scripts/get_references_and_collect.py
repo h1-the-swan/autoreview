@@ -94,6 +94,7 @@ class PaperCollector(object):
                         logfile.write("directory {} exists but collection did not complete. deleting this directory and continuing with collection.\n".format(this_outdir))
                         shutil.rmtree(this_outdir)
                 this_outdir.mkdir()
+                this_start = timer()
                 logger.debug("collecting papers to go in {}".format(this_outdir))
                 logfile.write("collecting papers to go in {}\n".format(this_outdir))
                 a = Autoreview(id_list=reference_ids,
@@ -107,6 +108,7 @@ class PaperCollector(object):
                                 config=self._config)
                 a.get_papers_2_degrees_out()
                 this_outdir.joinpath('._COMPLETE').touch()
+                logfile.write("collecting papers for {} took {}\n".format(this_outdir, timer()-this_start))
 
             logfile.write("\n{} - COLLECTION COMPLETED\n".format(datetime.now()))
         finally:

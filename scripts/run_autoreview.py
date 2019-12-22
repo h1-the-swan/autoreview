@@ -38,6 +38,7 @@ def get_id_list(fname):
 
 def main(args):
     id_list = get_id_list(args.id_list)
+    use_spark = not args.no_spark
     a = Autoreview(id_list=id_list,
                     citations=args.citations,
                     papers=args.papers,
@@ -45,7 +46,8 @@ def main(args):
                     sample_size=args.sample_size,
                     random_seed=args.random_seed,
                     id_colname=args.id_colname,
-                    cited_colname=args.cited_colname)
+                    cited_colname=args.cited_colname,
+                    use_spark=use_spark)
     a.run()
 
 if __name__ == "__main__":
@@ -63,6 +65,7 @@ if __name__ == "__main__":
     parser.add_argument("--random-seed", type=int, default=999, help="random seed (integer, default: 999)")
     parser.add_argument("--id-colname", default='UID', help="column name for paper id (default: \"UID\")")
     parser.add_argument("--cited-colname", default='cited_UID', help="column name for cited paper id (default: \"cited_UID\")")
+    parser.add_argument("--no-spark", action='store_true', help="don't use spark to collect candidate papers")
     parser.add_argument("--debug", action='store_true', help="output debugging info")
     global args
     args = parser.parse_args()

@@ -17,7 +17,7 @@ except ImportError:
         return "{:.2f} seconds".format(seconds)
 
 from .config import Config
-from .util import load_random_state, prepare_directory, load_spark_dataframe, save_pandas_dataframe_to_pickle, remove_seed_papers_from_test_set, remove_missing_titles, year_lowpass_filter, predict_ranks_from_data
+from .util import load_random_state, prepare_directory, load_spark_dataframe, save_pandas_dataframe_to_pickle, remove_seed_papers_from_test_set, remove_missing_titles, year_lowpass_filter, predict_ranks_from_data, load_pandas_dataframe
 
 import numpy as np
 import pandas as pd
@@ -41,7 +41,7 @@ class Autoreview(object):
 
     """Toplevel Autoreview object"""
 
-    def __init__(self, outdir, id_list=None, citations=None, papers=None, sample_size=None, random_seed=None, id_colname='UID', citing_colname=None, cited_colname='cited_UID', config=None):
+    def __init__(self, outdir, id_list=None, citations=None, papers=None, sample_size=None, random_seed=None, id_colname='UID', citing_colname=None, cited_colname='cited_UID', use_spark=True, config=None):
         """
         :outdir: output directory.
         :random_seed: integer
@@ -55,6 +55,7 @@ class Autoreview(object):
         :id_colname: default is 'UID'
         :citing_colname: default is 'UID'
         :cited_colname: default is 'cited_UID'
+        :use_spark: whether to use spark to get seed and candidate paper sets
 
         """
         self.outdir = outdir
@@ -68,7 +69,9 @@ class Autoreview(object):
             self._config = config
         else:
             self._config = Config()
-        self.spark = self._config.spark
+        self.use_spark = use_spark
+        if self.use_spark is True:
+            self.spark = self._config.spark
 
         self.best_model_pipeline_experiment = None
 
@@ -95,14 +98,24 @@ class Autoreview(object):
             self.citing_colname = id_colname
         self.cited_colname = cited_colname
 
-    def follow_citations(self, sdf, sdf_citations):
+    def follow_citations(self, df, df_citations, use_spark=True):
         """follow in- and out-citations
 
-        :sdf: a spark dataframe with one column `ID` that contains the ids to follow in- and out-citations
-        :sdf_citations: spark dataframe with citation data. columns are `ID` and `cited_ID`
-        :returns: spark dataframe with one column `ID` that contains deduplicated IDs for in- and out-citations
+        :df: a dataframe with one column `ID` that contains the ids to follow in- and out-citations
+        :df_citations: dataframe with citation data. columns are `ID` and `cited_ID`
+        :returns: dataframe with one column `ID` that contains deduplicated IDs for in- and out-citations
 
         """
+        if use_spark is True:
+            return self._follow_citations_spark(df, df_citations)
+        df_outcitations = df_citations.merge(df, on='ID', how='inner')
+        df_incitations = df_citations.merge(df.rename(columns={'ID': 'cited_ID'}, errors='raise'), on='cited_ID', how='inner')
+        combined = np.append(df_outcitations.values.flatten(), df_incitations.values.flatten())
+        combined = np.unique(combined)
+        return pd.DataFrame(combined, columns=['ID'])
+
+
+    def _follow_citations_spark(self, sdf, sdf_citations):
         sdf_outcitations = sdf_citations.join(sdf, on='ID', how='inner')
         _sdf_renamed = sdf.withColumnRenamed('ID', 'cited_ID')
         sdf_incitations = sdf_citations.join(_sdf_renamed, on='cited_ID')
@@ -123,7 +136,7 @@ class Autoreview(object):
             sdf_combined = sdf_combined.union(sdf.select(['cited_ID']).withColumnRenamed('cited_ID', 'ID'))
         return sdf_combined.drop_duplicates()
 
-    def get_papers_2_degrees_out(self):
+    def get_papers_2_degrees_out(self, use_spark=True):
         """For a list of paper IDs (in `self.id_list`),
         get all papers citing or cited by those, then repeat for 
         all these new papers.
@@ -133,9 +146,50 @@ class Autoreview(object):
         :returns: pandas dataframes for seed, target, and test papers
 
         """
-        df_id_list = pd.DataFrame(self.id_list, columns=['ID'])
+        df_id_list = pd.DataFrame(self.id_list, columns=['ID'], dtype=str)
         seed_papers, target_papers = train_test_split(df_id_list, train_size=self.sample_size, random_state=self.random_state)
 
+        if use_spark is True:
+            return self._get_papers_2_degrees_out_spark(seed_papers, target_papers)
+
+        df_papers = load_pandas_dataframe(self.papers)
+        df_papers = df_papers.rename(columns={self.id_colname: 'ID'}, errors='raise')
+        df_papers['ID'] = df_papers['ID'].astype(str)
+        df_papers = df_papers.dropna(subset=['cl'])
+
+        outfname = os.path.join(self.outdir, 'seed_papers.pickle')
+        logger.debug('saving seed papers to {}'.format(outfname))
+        start = timer()
+        df_seed = seed_papers.merge(df_papers, on='ID', how='inner')
+        save_pandas_dataframe_to_pickle(df_seed, outfname)
+        logger.debug("done saving seed papers. took {}".format(format_timespan(timer()-start)))
+
+        outfname = os.path.join(self.outdir, 'target_papers.pickle')
+        logger.debug('saving target papers to {}'.format(outfname))
+        start = timer()
+        df_target = target_papers.merge(df_papers, on='ID', how='inner')
+        save_pandas_dataframe_to_pickle(df_target, outfname)
+        logger.debug("done saving target papers. took {}".format(format_timespan(timer()-start)))
+
+        df_citations = load_pandas_dataframe(self.citations)
+        df_citations = df_citations.rename(columns={self.citing_colname: 'ID', self.cited_colname: 'cited_ID'}, errors='raise')
+        df_citations['ID'] = df_citations['ID'].astype(str)
+        df_citations['cited_ID'] = df_citations['cited_ID'].astype(str)
+
+        # collect IDs for in- and out-citations
+        df_combined = self.follow_citations(df_seed[['ID']], df_citations, use_spark=False)
+        # do it all again to get second degree
+        df_combined = self.follow_citations(df_combined, df_citations, use_spark=False)
+        outfname = os.path.join(self.outdir, 'test_papers.pickle')
+        logger.debug("saving test papers to {}".format(outfname))
+        start = timer()
+        df_combined = df_combined.merge(df_papers, on='ID', how='inner')
+        save_pandas_dataframe_to_pickle(df_combined, outfname)
+        logger.debug("done saving test papers. took {}".format(format_timespan(timer()-start)))
+        return df_seed, df_target, df_combined  # seed, target, test (candidate) papers
+        
+
+    def _get_papers_2_degrees_out_spark(self, seed_papers, target_papers):
         sdf_papers = load_spark_dataframe(self.papers, self.spark) 
         sdf_papers = sdf_papers.withColumnRenamed(self.id_colname, 'ID')
         sdf_papers = sdf_papers.dropna(subset=['cl'])
@@ -183,12 +237,15 @@ class Autoreview(object):
 
         """
         test_papers = remove_seed_papers_from_test_set(candidate_papers, seed_papers)
-        target_ids = set(target_papers.Paper_ID)
-        test_papers['target'] = test_papers.Paper_ID.apply(lambda x: x in target_ids)
+        # target_ids = set(target_papers.Paper_ID)
+        target_ids = set(target_papers['ID'])
+        # test_papers['target'] = test_papers.Paper_ID.apply(lambda x: x in target_ids)
+        test_papers['target'] = test_papers['ID'].apply(lambda x: x in target_ids)
         test_papers = remove_missing_titles(test_papers)
         # TODO IMPLEMENT YEAR LOWPASS FILTER
         # test_papers = year_lowpass_filter(test_papers, year=args.year)
-        logger.debug("There are {} target papers. {} of these appear in the haystack.".format(target_papers.Paper_ID.nunique(), test_papers['target'].sum()))
+        # logger.debug("There are {} target papers. {} of these appear in the haystack.".format(target_papers.Paper_ID.nunique(), test_papers['target'].sum()))
+        logger.debug("There are {} target papers. {} of these appear in the haystack.".format(target_papers['ID'].nunique(), test_papers['target'].sum()))
 
         logger.debug("\nSEED PAPERS: seed_papers.head()")
         logger.debug(seed_papers.head())
@@ -290,8 +347,9 @@ class Autoreview(object):
         """
         try:
             prepare_directory(self.outdir)
-            seed_papers, target_papers, candidate_papers = self.get_papers_2_degrees_out()
+            seed_papers, target_papers, candidate_papers = self.get_papers_2_degrees_out(use_spark=self.use_spark)
 
+            logger.debug(target_papers.dtypes)
             self.train_models(seed_papers, target_papers, candidate_papers)
 
         finally:

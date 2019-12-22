@@ -54,7 +54,7 @@ Example
 
 - Run the full autoreview pipeline using sample data::
 
-        python scripts/run_autoreview.py --id-list sample_data/sample_IDs_MAG.txt --citations sample_data/MAG_citations_sample --papers sample_data/MAG_papers_sample --sample-size 15 --random-seed 999 --id-colname Paper_ID --cited-colname Paper_reference_ID --outdir sample_data/sample_output --debug
+        python scripts/run_autoreview.py --id-list sample_data/sample_IDs_MAG.txt --citations sample_data/MAG_citations_sample --papers sample_data/MAG_papers_sample --sample-size 15 --random-seed 999 --id-colname Paper_ID --cited-colname Paper_Reference_ID --outdir sample_data/sample_output --debug
 
 - This is just meant to show how the system operates. It will not provide meaningful results with such a small sample of paper and citation data.
 

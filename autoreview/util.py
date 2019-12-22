@@ -49,6 +49,14 @@ def load_spark_dataframe(path_to_data, spark, fmt=None):
         # Assume parquet format
         return spark.read.parquet(path_to_data)
 
+def load_pandas_dataframe(path_to_data, fmt=None):
+    if (fmt and fmt.lower()=='tsv') or ('parquet' not in path_to_data.lower() and ('csv' in path_to_data.lower() or 'tsv' in path_to_data.lower())):
+        # ASSUME TAB SEPARATED
+        return pd.read_csv(path_to_data, sep='\t', header=True)
+    else:
+        # Assume parquet format
+        return pd.read_parquet(path_to_data)
+
 def get_year(x):
     if x:
         return x.year
@@ -59,7 +67,7 @@ def save_pandas_dataframe_to_pickle(df, outfname):
     if 'year' not in df.columns:
         df['year'] = df['pub_date'].apply(get_year)
     columns_rename = {
-        'ID': 'Paper_ID',
+        # 'ID': 'Paper_ID',
         'flow': 'EF'
     }
     df.rename(columns=columns_rename, inplace=True)

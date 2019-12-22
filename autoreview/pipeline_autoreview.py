@@ -81,7 +81,7 @@ class PipelineExperiment(object):
         self.predictions = X.join(pred_ranks).sort_values('pred_ranks', ascending=False)
         return self
 
-    def top_predictions(self, n=200, id_colname='Paper_ID'):
+    def top_predictions(self, n=200, id_colname='ID'):
         _top_predictions = self.predictions.head(n)
         self.num_correctly_predicted = len(_top_predictions[_top_predictions.target==True])
         return _top_predictions.groupby('target')[id_colname].count()

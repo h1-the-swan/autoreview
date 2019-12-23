@@ -41,7 +41,7 @@ class Autoreview(object):
 
     """Toplevel Autoreview object"""
 
-    def __init__(self, outdir, id_list=None, citations=None, papers=None, sample_size=None, random_seed=None, id_colname='UID', citing_colname=None, cited_colname='cited_UID', use_spark=True, config=None):
+    def __init__(self, outdir, id_list=None, citations=None, papers=None, sample_size=None, random_seed=None, id_colname='UID', citing_colname=None, cited_colname='cited_UID', use_spark=True, config=None, citations_data_preloaded=None, paper_data_preloaded=None):
         """
         :outdir: output directory.
         :random_seed: integer
@@ -56,12 +56,14 @@ class Autoreview(object):
         :citing_colname: default is 'UID'
         :cited_colname: default is 'cited_UID'
         :use_spark: whether to use spark to get seed and candidate paper sets
+        :citations_data_preloaded: use this to supply citations data already in memory, instead of having to load it within the Autoreview object. Should be a pandas dataframe. Only do this if not using Spark.
+        :paper_data_preloaded: use this to supply papers data already in memory, instead of having to load it within the Autoreview object. Should be a pandas dataframe. Only do this if not using Spark.
 
         """
         self.outdir = outdir
         self.random_state = load_random_state(random_seed)
 
-        self.prepare_for_collection(id_list, citations, papers, sample_size, id_colname, citing_colname, cited_colname)
+        self.prepare_for_collection(id_list, citations, papers, sample_size, id_colname, citing_colname, cited_colname, citations_data_preloaded, paper_data_preloaded)
         # if these are unspecified, the user will have to overwrite them later by calling prepare_for_collection() manually
 
         if config is not None:
@@ -75,7 +77,7 @@ class Autoreview(object):
 
         self.best_model_pipeline_experiment = None
 
-    def prepare_for_collection(self, id_list, citations, papers, sample_size, id_colname='UID', citing_colname=None, cited_colname='cited_UID'):
+    def prepare_for_collection(self, id_list, citations, papers, sample_size, id_colname='UID', citing_colname=None, cited_colname='cited_UID', citations_data_preloaded=None, paper_data_preloaded=None):
         """Provide arguments for paper collection (use this if these arguments were not already provided at initialization)
 
         :id_list: list of strings: IDs for the seed set
@@ -85,6 +87,8 @@ class Autoreview(object):
         :id_colname: default is 'UID'
         :citing_colname: default is 'UID'
         :cited_colname: default is 'cited_UID'
+        :citations_data_preloaded: use this to supply citations data already in memory, instead of having to load it within the Autoreview object. Should be a pandas dataframe.
+        :paper_data_preloaded: use this to supply papers data already in memory, instead of having to load it within the Autoreview object. Should be a pandas dataframe.
 
         """
         self.id_list = id_list
@@ -97,6 +101,8 @@ class Autoreview(object):
         else:
             self.citing_colname = id_colname
         self.cited_colname = cited_colname
+        self.df_citations = citations_data_preloaded
+        self.df_papers = paper_data_preloaded
 
     def follow_citations(self, df, df_citations, use_spark=True):
         """follow in- and out-citations
@@ -152,7 +158,13 @@ class Autoreview(object):
         if use_spark is True:
             return self._get_papers_2_degrees_out_spark(seed_papers, target_papers)
 
-        df_papers = load_pandas_dataframe(self.papers)
+        if self.df_papers is not None:
+            if not isinstance(self.df_papers, pd.DataFrame):
+                raise TypeError("Provided paper data must be a pandas dataframe, but it is {}".format(type(self.df_papers)))
+            df_papers = self.df_papers
+        else:
+            logger.debug("loading papers data...")
+            df_papers = load_pandas_dataframe(self.papers)
         df_papers = df_papers.rename(columns={self.id_colname: 'ID'}, errors='raise')
         df_papers['ID'] = df_papers['ID'].astype(str)
         df_papers = df_papers.dropna(subset=['cl'])
@@ -174,7 +186,13 @@ class Autoreview(object):
         outfname = os.path.join(self.outdir, 'test_papers.pickle')
         logger.debug("saving test papers to {}".format(outfname))
 
-        df_citations = load_pandas_dataframe(self.citations)
+        if self.df_citations is not None:
+            if not isinstance(self.df_citations, pd.DataFrame):
+                raise TypeError("Provided citations data must be a pandas dataframe, but it is {}".format(type(self.df_papers)))
+            df_citations = self.df_citations
+        else:
+            logger.debug('loading citations data...')
+            df_citations = load_pandas_dataframe(self.citations)
         df_citations = df_citations.rename(columns={self.citing_colname: 'ID', self.cited_colname: 'cited_ID'}, errors='raise')
         df_citations['ID'] = df_citations['ID'].astype(str)
         df_citations['cited_ID'] = df_citations['cited_ID'].astype(str)
@@ -353,7 +371,6 @@ class Autoreview(object):
             prepare_directory(self.outdir)
             seed_papers, target_papers, candidate_papers = self.get_papers_2_degrees_out(use_spark=self.use_spark)
 
-            logger.debug(target_papers.dtypes)
             self.train_models(seed_papers, target_papers, candidate_papers)
 
         finally:

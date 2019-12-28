@@ -42,6 +42,7 @@ def prepare_directory(outdir):
     os.mkdir(outdir)
 
 def load_spark_dataframe(path_to_data, spark, fmt=None):
+    path_to_data = str(path_to_data)
     if (fmt and fmt.lower()=='tsv') or ('parquet' not in path_to_data.lower() and ('csv' in path_to_data.lower() or 'tsv' in path_to_data.lower())):
         # ASSUME TAB SEPARATED
         return spark.read.csv(path_to_data, sep='\t', header=True)
@@ -50,6 +51,7 @@ def load_spark_dataframe(path_to_data, spark, fmt=None):
         return spark.read.parquet(path_to_data)
 
 def load_pandas_dataframe(path_to_data, fmt=None):
+    path_to_data = str(path_to_data)
     if (fmt and fmt.lower()=='tsv') or ('parquet' not in path_to_data.lower() and ('csv' in path_to_data.lower() or 'tsv' in path_to_data.lower())):
         # ASSUME TAB SEPARATED
         return pd.read_csv(path_to_data, sep='\t', header=True)

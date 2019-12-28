@@ -249,13 +249,13 @@ class Autoreview(object):
         logger.debug("done saving test papers. took {}".format(format_timespan(timer()-start)))
         return df_seed, df_target, df_combined  # seed, target, test (candidate) papers
 
-    def train_models(self, seed_papers, target_papers, candidate_papers):
+    def train_models(self, seed_papers, target_papers, candidate_papers, year_lowpass=None):
         """train models one by one, find the one with the best score
 
         :seed_papers: pandas dataframe
         :target_papers: pandas dataframe
         :candidate_papers: pandas dataframe
-        :returns: TODO
+        :year_lowpass: (optional) cutoff year. All candidate papers this year or more recent will be removed.
 
         """
         test_papers = remove_seed_papers_from_test_set(candidate_papers, seed_papers)
@@ -264,8 +264,8 @@ class Autoreview(object):
         # test_papers['target'] = test_papers.Paper_ID.apply(lambda x: x in target_ids)
         test_papers['target'] = test_papers['ID'].apply(lambda x: x in target_ids)
         test_papers = remove_missing_titles(test_papers)
-        # TODO IMPLEMENT YEAR LOWPASS FILTER
-        # test_papers = year_lowpass_filter(test_papers, year=args.year)
+        if year_lowpass is not None:
+            test_papers = year_lowpass_filter(test_papers, year_lowpass)
         # logger.debug("There are {} target papers. {} of these appear in the haystack.".format(target_papers.Paper_ID.nunique(), test_papers['target'].sum()))
         logger.debug("There are {} target papers. {} of these appear in the haystack.".format(target_papers['ID'].nunique(), test_papers['target'].sum()))
 

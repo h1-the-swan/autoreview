@@ -238,7 +238,7 @@ class ClusterTransformer(BaseEstimator, TransformerMixin):
     
     def transform(self, df):
         avg_dist = df[self.colname].apply(avg_distance, cl_group=self.seed_papers.cl.tolist())
-        return avg_dist.as_matrix().reshape(-1, 1)
+        return avg_dist.to_numpy().reshape(-1, 1)
 
 
 class DataFrameColumnTransformer(BaseEstimator, TransformerMixin):
@@ -249,7 +249,7 @@ class DataFrameColumnTransformer(BaseEstimator, TransformerMixin):
         return self
     
     def transform(self, df):
-        return df[self.colname].as_matrix().reshape(-1, 1)
+        return df[self.colname].to_numpy().reshape(-1, 1)
 
 class AverageTfidfCosSimTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, seed_papers=None, colname='title'):

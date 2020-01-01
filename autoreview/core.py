@@ -249,13 +249,15 @@ class Autoreview(object):
         logger.debug("done saving test papers. took {}".format(format_timespan(timer()-start)))
         return df_seed, df_target, df_combined  # seed, target, test (candidate) papers
 
-    def train_models(self, seed_papers, target_papers, candidate_papers, year_lowpass=None):
+    def train_models(self, seed_papers, target_papers, candidate_papers, year_lowpass=None, clfs=None, transformer_list=None):
         """train models one by one, find the one with the best score
 
         :seed_papers: pandas dataframe
         :target_papers: pandas dataframe
         :candidate_papers: pandas dataframe
         :year_lowpass: (optional) cutoff year. All candidate papers this year or more recent will be removed.
+        :clfs: List of classifiers to try. See code for the defaults to be used if not supplied.
+        :transformer_list: List of features and transformers to use. See code for the defaults to be used if not supplied.
 
         """
         test_papers = remove_seed_papers_from_test_set(candidate_papers, seed_papers)
@@ -276,37 +278,43 @@ class Autoreview(object):
 
         X = test_papers.reset_index()
         y = X['target']
-        clfs = [
-            LogisticRegression(random_state=self.random_state),
-            LogisticRegression(random_state=self.random_state, class_weight='balanced'),
-            LogisticRegression(random_state=self.random_state, penalty='l1'),
-            # SVC(probability=True, random_state=args.seed),  # this one doesn't perform well
-            # SVC(probability=True, random_state=args.seed, class_weight='balanced'),  # this one takes a long time (8hours?)
-            SVC(kernel='linear', probability=True, random_state=self.random_state),
-            SGDClassifier(loss='modified_huber', random_state=self.random_state),
-            GaussianNB(),
-            RandomForestClassifier(n_estimators=50, random_state=self.random_state),
-            RandomForestClassifier(n_estimators=100, random_state=self.random_state),
-            RandomForestClassifier(n_estimators=500, random_state=self.random_state),
-            RandomForestClassifier(n_estimators=100, criterion="entropy", random_state=self.random_state),
-            RandomForestClassifier(n_estimators=500, criterion="entropy", random_state=self.random_state),
-            AdaBoostClassifier(n_estimators=500, random_state=self.random_state),
-        ]
-        transformer_list = [
-            ('avg_distance_to_train', Pipeline([
-                ('cl_feat', ClusterTransformer(seed_papers=seed_papers)),
-            ])),
-            ('ef', Pipeline([
-                ('ef_feat', DataFrameColumnTransformer('EF')),
-            ])),
-        ]
 
-        # include a feature for similarity of titles
-        transformer_list.append(
-            ('avg_title_tfidf_cosine_similarity', Pipeline([
-                ('title_feat', AverageTfidfCosSimTransformer(seed_papers=seed_papers, colname='title')),
-            ]))
-        )
+        # Default classifiers
+        if clfs is None:
+            clfs = [
+                LogisticRegression(random_state=self.random_state),
+                LogisticRegression(random_state=self.random_state, class_weight='balanced'),
+                LogisticRegression(random_state=self.random_state, penalty='l1'),
+                # SVC(probability=True, random_state=args.seed),  # this one doesn't perform well
+                # SVC(probability=True, random_state=args.seed, class_weight='balanced'),  # this one takes a long time (8hours?)
+                # SVC(kernel='linear', probability=True, random_state=self.random_state),
+                # SGDClassifier(loss='modified_huber', random_state=self.random_state),
+                # GaussianNB(),
+                RandomForestClassifier(n_estimators=50, random_state=self.random_state),
+                RandomForestClassifier(n_estimators=100, random_state=self.random_state),
+                RandomForestClassifier(n_estimators=500, random_state=self.random_state),
+                RandomForestClassifier(n_estimators=100, criterion="entropy", random_state=self.random_state),
+                RandomForestClassifier(n_estimators=500, criterion="entropy", random_state=self.random_state),
+                AdaBoostClassifier(n_estimators=500, random_state=self.random_state),
+            ]
+
+        # Default features/transformers
+        if transformer_list is None:
+            transformer_list = [
+                ('avg_distance_to_train', Pipeline([
+                    ('cl_feat', ClusterTransformer(seed_papers=seed_papers)),
+                ])),
+                ('ef', Pipeline([
+                    ('ef_feat', DataFrameColumnTransformer('EF')),
+                ])),
+                # ('year', Pipeline([
+                #     ('year_feat', DataFrameColumnTransformer('year')),
+                # ])),
+                ('avg_title_tfidf_cosine_similarity', Pipeline([
+                    ('title_feat', AverageTfidfCosSimTransformer(seed_papers=seed_papers, colname='title')),
+                ])),
+            ]
+
 
         from sklearn.externals import joblib
         best_model_dir = os.path.join(self.outdir, "best_model_{:%Y%m%d%H%M%S%f}".format(datetime.now()))

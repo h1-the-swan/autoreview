@@ -316,7 +316,8 @@ class Autoreview(object):
             ]
 
 
-        from sklearn.externals import joblib
+        # from sklearn.externals import joblib
+        import joblib
         best_model_dir = os.path.join(self.outdir, "best_model_{:%Y%m%d%H%M%S%f}".format(datetime.now()))
         os.mkdir(best_model_dir)
         best_model_fname = os.path.join(best_model_dir, "best_model.pickle")

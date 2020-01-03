@@ -20,7 +20,8 @@ logger = logging.getLogger('__main__').getChild(__name__)
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.externals import joblib
+# from sklearn.externals import joblib
+import joblib
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity

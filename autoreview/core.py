@@ -285,7 +285,7 @@ class Autoreview(object):
             clfs = [
                 LogisticRegression(random_state=self.random_state),
                 LogisticRegression(random_state=self.random_state, class_weight='balanced'),
-                LogisticRegression(random_state=self.random_state, penalty='l1'),
+                # LogisticRegression(random_state=self.random_state, penalty='l1'),  # this one started raising an error
                 # SVC(probability=True, random_state=args.seed),  # this one doesn't perform well
                 # SVC(probability=True, random_state=args.seed, class_weight='balanced'),  # this one takes a long time (8hours?)
                 # SVC(kernel='linear', probability=True, random_state=self.random_state),
@@ -325,6 +325,7 @@ class Autoreview(object):
             if os.path.exists(outdir):
                 logger.warn('output directory {} already exists. using this. this may overwrite files'.format(outdir))
             else:
+                logger.debug("creating directory: {}".format(outdir))
                 os.mkdir(outdir)
         best_model_dir = os.path.join(outdir, "best_model_{:%Y%m%d%H%M%S%f}".format(datetime.now()))
         os.mkdir(best_model_dir)

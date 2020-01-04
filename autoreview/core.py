@@ -322,7 +322,10 @@ class Autoreview(object):
         outdir = self.outdir
         if subdir is not None:
             outdir = os.path.join(outdir, subdir)
-            os.mkdir(outdir)
+            if os.path.exists(outdir):
+                logger.warn('output directory {} already exists. using this. this may overwrite files'.format(outdir))
+            else:
+                os.mkdir(outdir)
         best_model_dir = os.path.join(outdir, "best_model_{:%Y%m%d%H%M%S%f}".format(datetime.now()))
         os.mkdir(best_model_dir)
         best_model_fname = os.path.join(best_model_dir, "best_model.pickle")

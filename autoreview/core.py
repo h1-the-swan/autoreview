@@ -249,12 +249,13 @@ class Autoreview(object):
         logger.debug("done saving test papers. took {}".format(format_timespan(timer()-start)))
         return df_seed, df_target, df_combined  # seed, target, test (candidate) papers
 
-    def train_models(self, seed_papers, target_papers, candidate_papers, year_lowpass=None, clfs=None, transformer_list=None):
+    def train_models(self, seed_papers, target_papers, candidate_papers, subdir=None, year_lowpass=None, clfs=None, transformer_list=None):
         """train models one by one, find the one with the best score
 
         :seed_papers: pandas dataframe
         :target_papers: pandas dataframe
         :candidate_papers: pandas dataframe
+        :subdir: if specified, create a subdirectory within the output directory and put the results in there
         :year_lowpass: (optional) cutoff year. All candidate papers this year or more recent will be removed.
         :clfs: List of classifiers to try. See code for the defaults to be used if not supplied.
         :transformer_list: List of features and transformers to use. See code for the defaults to be used if not supplied.
@@ -293,8 +294,8 @@ class Autoreview(object):
                 RandomForestClassifier(n_estimators=50, random_state=self.random_state),
                 RandomForestClassifier(n_estimators=100, random_state=self.random_state),
                 RandomForestClassifier(n_estimators=500, random_state=self.random_state),
-                RandomForestClassifier(n_estimators=100, criterion="entropy", random_state=self.random_state),
-                RandomForestClassifier(n_estimators=500, criterion="entropy", random_state=self.random_state),
+                # RandomForestClassifier(n_estimators=100, criterion="entropy", random_state=self.random_state),
+                # RandomForestClassifier(n_estimators=500, criterion="entropy", random_state=self.random_state),
                 AdaBoostClassifier(n_estimators=500, random_state=self.random_state),
             ]
 
@@ -318,7 +319,11 @@ class Autoreview(object):
 
         # from sklearn.externals import joblib
         import joblib
-        best_model_dir = os.path.join(self.outdir, "best_model_{:%Y%m%d%H%M%S%f}".format(datetime.now()))
+        outdir = self.outdir
+        if subdir is not None:
+            outdir = os.path.join(outdir, subdir)
+            os.mkdir(outdir)
+        best_model_dir = os.path.join(outdir, "best_model_{:%Y%m%d%H%M%S%f}".format(datetime.now()))
         os.mkdir(best_model_dir)
         best_model_fname = os.path.join(best_model_dir, "best_model.pickle")
 
@@ -368,7 +373,7 @@ class Autoreview(object):
         logger.info("Scoring all test papers...")
         df_predictions = predict_ranks_from_data(self.best_model_pipeline_experiment.pipeline, test_papers)
         df_predictions = df_predictions[df_predictions.target==False].drop(columns='target')
-        outfname = os.path.join(self.outdir, 'predictions.tsv')
+        outfname = os.path.join(outdir, 'predictions.tsv')
         df_predictions.head(100).to_csv(outfname, sep='\t')
 
 

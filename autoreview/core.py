@@ -322,7 +322,7 @@ class Autoreview(object):
         outdir = self.outdir
         if subdir is not None:
             outdir = os.path.join(outdir, subdir)
-            if os.path.exists(outdir):
+            if os.path.exists(outdir) and os.listdir(outdir):  # directory exists and is not empty
                 logger.warn('output directory {} already exists. using this. this may overwrite files'.format(outdir))
             else:
                 logger.debug("creating directory: {}".format(outdir))

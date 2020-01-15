@@ -249,7 +249,7 @@ class Autoreview(object):
         logger.debug("done saving test papers. took {}".format(format_timespan(timer()-start)))
         return df_seed, df_target, df_combined  # seed, target, test (candidate) papers
 
-    def train_models(self, seed_papers, target_papers, candidate_papers, subdir=None, year_lowpass=None, clfs=None, transformer_list=None):
+    def train_models(self, seed_papers, target_papers, candidate_papers, subdir=None, year_lowpass=None, clfs=None, transformer_list=None, save_best=True):
         """train models one by one, find the one with the best score
 
         :seed_papers: pandas dataframe
@@ -327,9 +327,10 @@ class Autoreview(object):
             else:
                 logger.debug("creating directory: {}".format(outdir))
                 os.mkdir(outdir)
-        best_model_dir = os.path.join(outdir, "best_model_{:%Y%m%d%H%M%S%f}".format(datetime.now()))
-        os.mkdir(best_model_dir)
-        best_model_fname = os.path.join(best_model_dir, "best_model.pickle")
+        if save_best is True:
+            best_model_dir = os.path.join(outdir, "best_model_{:%Y%m%d%H%M%S%f}".format(datetime.now()))
+            os.mkdir(best_model_dir)
+            best_model_fname = os.path.join(best_model_dir, "best_model.pickle")
 
         best_score = 0
         for clf in clfs:
@@ -356,19 +357,21 @@ class Autoreview(object):
             #     session.close()
             if experiment.score_correctly_predicted > best_score:
                 best_score = experiment.score_correctly_predicted
-                # if args.save_best:
-                start = timer()
-                logger.debug("This is the best model so far. Saving to {}...".format(best_model_fname))
-                joblib.dump(experiment.pipeline, best_model_fname)
-                logger.debug("Saved model in {}".format(format_timespan(timer()-start)))
+                if save_best is True:
+                    start = timer()
+                    logger.debug("This is the best model so far. Saving to {}...".format(best_model_fname))
+                    joblib.dump(experiment.pipeline, best_model_fname)
+                    logger.debug("Saved model in {}".format(format_timespan(timer()-start)))
                 # best_rec_id = db_rec_id
                 self.best_model_pipeline_experiment = experiment
             logger.info("\n")
         if best_score == 0:
-            logger.info("None of the models scored higher than 0. Saving last model to {}...".format(best_model_fname))
-            start = timer()
-            joblib.dump(experiment.pipeline, best_model_fname)
-            logger.debug("Saved model in {}".format(format_timespan(timer()-start)))
+            logger.info("None of the models scored higher than 0. Setting best model to the last model")
+            if save_best is True:
+                logger.info("Saving last model to {}...".format(best_model_fname))
+                start = timer()
+                joblib.dump(experiment.pipeline, best_model_fname)
+                logger.debug("Saved model in {}".format(format_timespan(timer()-start)))
             # best_rec_id = db_rec_id
             self.best_model_pipeline_experiment = experiment
         else:

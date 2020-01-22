@@ -21,6 +21,8 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline, FeatureUnion
 
+from .util import prec_recall_f1_at_n, average_precision
+
 class PipelineExperiment(object):
 
     """configure and run a pipeline for a review paper classifier"""
@@ -114,5 +116,23 @@ class PipelineExperiment(object):
         logger.info("TOP PREDICTIONS: True is count of target papers in the top predicted")
         logger.info(self.top_predictions(n=num_target))
         self.score_correctly_predicted = self.num_correctly_predicted / self.num_target_papers  # R-Precision score
+
+        preds = self.predictions.target
+        logger.debug("Precision, Recall, F1 scores at n:")
+        self.prec_at_n = {}
+        self.recall_at_n = {}
+        self.f1_at_n = {}
+        for n in [10, 50, 100, 500, 1000, 10000, 50000, 100000, 500000, 1e6, 5e6, 1e7, 5e7, 1e8]:
+            n = int(n)
+            n = min(n, len(preds))
+            prec, recall, f1 = prec_recall_f1_at_n(preds, self.num_target_papers, n)
+            self.prec_at_n[n] = prec
+            self.recall_at_n[n] = recall
+            self.f1_at_n[n] = f1
+            logger.debug("n=={}: prec=={}, recall=={}, f1=={}".format(n, prec, recall, f1))
+            if n >= len(preds):
+                break
+        self.average_precision = average_precision(preds, self.num_target_papers)
+        logger.debug("average_precision=={}".format(self.average_precision))
 
 

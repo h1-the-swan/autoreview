@@ -277,3 +277,46 @@ class AverageTfidfCosSimTransformer(BaseEstimator, TransformerMixin):
         tfidf_seed = tfidf_transform.transform(tf_seed)
         csims = cosine_similarity(tfidf_test, tfidf_seed.mean(axis=0))
         return csims
+
+def prec_at_n(preds, n=10):
+    """Precision at n
+
+    :preds: True/False predictions (in rank order)
+    :returns: precision at n (float)
+
+    """
+    a = np.asarray(preds)
+    return a[:n].mean()
+
+def recall_at_n(preds, num_relevant, n=10):
+    """Recall at n
+
+    :preds: True/False predictions (in rank order)
+    :num_relevant: total number of relevant documents
+    :returns: recall at n (float)
+
+    """
+    a = np.asarray(preds)
+    return a[:n].sum() / num_relevant
+
+def f1_score(prec, recall):
+    return (2 * prec * recall) / (prec + recall)
+
+def prec_recall_f1_at_n(preds, num_relevant, n=10):
+    prec = prec_at_n(preds, n)
+    recall = recall_at_n(preds, num_relevant, n)
+    return prec, recall, f1_score(prec, recall)
+
+def average_precision(preds, num_relevant):
+    """Average precision
+
+    :preds: True/False predictions (in rank order)
+    :num_relevant: total number of relevant documents
+    :returns: average precision (float)
+
+    """
+    a = np.asarray(preds)
+    prec_scores = [prec_at_n(a, n) for n in range(1, a.size) if a[n]]
+    if not prec_scores:
+        return 0
+    return np.sum(prec_scores) / num_relevant

@@ -379,6 +379,12 @@ class Autoreview(object):
 
         logger.info("Scoring all test papers...")
         df_predictions = predict_ranks_from_data(self.best_model_pipeline_experiment.pipeline, test_papers)
+
+        # save all ranked predictions (true/false according to whether they are target papers):
+        outfname = os.path.join(outdir, 'all_pred_y_target.csv.gz')
+        df_predictions.target.to_csv(outfname, index=False, header=False)
+
+        # save non-target predictions
         df_predictions = df_predictions[df_predictions.target==False].drop(columns='target')
         outfname = os.path.join(outdir, 'predictions.tsv')
         df_predictions.head(100).to_csv(outfname, sep='\t')

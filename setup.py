@@ -4,6 +4,7 @@
 
 from setuptools import setup, find_packages
 
+requirements = ['pandas', 'numpy', 'sklearn']
 
 with open('README.rst') as f:
     readme = f.read()
@@ -14,11 +15,12 @@ with open('LICENSE') as f:
 setup(
     name='autoreview',
     version='0.2.0',
+    install_requires=requirements,
     description='Library for ranking relevant papers based on a set of seed papers',
     long_description=readme,
     author='Jason Portenoy',
     author_email='jporteno@uw.edu',
-    url='',
+    url='https://github.com/h1-the-swan/autoreview',
     license=license,
     packages=find_packages(exclude=('tests', 'docs'))
 )

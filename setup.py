@@ -4,7 +4,7 @@
 
 from setuptools import setup, find_packages
 
-requirements = ['pandas', 'numpy', 'sklearn']
+requirements = ['python-dotenv', 'pandas', 'numpy', 'sklearn']
 
 with open('README.rst') as f:
     readme = f.read()

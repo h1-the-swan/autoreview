@@ -1,5 +1,6 @@
+########################
 Automated Lit Review
-========================
+########################
 
 Jason Portenoy
 2018
@@ -33,7 +34,7 @@ Output:
 - List of papers not in the seed set, ordered descending by relevance score.
 
 Example
-========
+=======
 
 - Apache Spark (https://spark.apache.org/downloads.html) must be installed to run the example.
 

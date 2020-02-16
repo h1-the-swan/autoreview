@@ -16,11 +16,7 @@ from util import load_spark_session
 spark = load_spark_session(appName="spark_get_papers_2_degrees_out", envfile='../spark.env')
 
 import logging
-logging.basicConfig(format='%(asctime)s %(name)s.%(lineno)d %(levelname)s : %(message)s',
-        datefmt="%H:%M:%S",
-        level=logging.INFO)
-# logger = logging.getLogger(__name__)
-logger = logging.getLogger('__main__').getChild(__name__)
+logger = logging.getLogger(__name__)
 
 def load_random_state(random_state=None):
     if random_state is None:

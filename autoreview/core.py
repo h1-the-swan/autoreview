@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 import logging
-logging.basicConfig(format='%(asctime)s %(name)s.%(lineno)d %(levelname)s : %(message)s',
-        datefmt="%H:%M:%S",
-        level=logging.INFO)
-# logger = logging.getLogger(__name__)
-logger = logging.getLogger('__main__').getChild(__name__)
+logger = logging.getLogger(__name__)
 
 import sys, os, time
 from datetime import datetime

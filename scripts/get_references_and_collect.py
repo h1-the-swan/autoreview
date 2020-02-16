@@ -13,11 +13,8 @@ except ImportError:
         return "{:.2f} seconds".format(seconds)
 
 import logging
-logging.basicConfig(format='%(asctime)s %(name)s.%(lineno)d %(levelname)s : %(message)s',
-        datefmt="%H:%M:%S",
-        level=logging.INFO)
-# logger = logging.getLogger(__name__)
-logger = logging.getLogger('__main__').getChild(__name__)
+root_logger = logging.getLogger()
+logger = root_logger.getChild(__name__)
 
 from slugify import slugify
 from autoreview import Autoreview
@@ -133,7 +130,9 @@ def main(args):
 
 if __name__ == "__main__":
     total_start = timer()
-    logger = logging.getLogger(__name__)
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(fmt="%(asctime)s %(name)s.%(lineno)d %(levelname)s : %(message)s", datefmt="%H:%M:%S"))
+    root_logger.addHandler(handler)
     logger.info(" ".join(sys.argv))
     logger.info( '{:%Y-%m-%d %H:%M:%S}'.format(datetime.now()) )
     import argparse
@@ -149,10 +148,10 @@ if __name__ == "__main__":
     global args
     args = parser.parse_args()
     if args.debug:
-        logger.setLevel(logging.DEBUG)
+        root_logger.setLevel(logging.DEBUG)
         logger.debug('debug mode is on')
     else:
-        logger.setLevel(logging.INFO)
+        root_logger.setLevel(logging.INFO)
     main(args)
     total_end = timer()
     logger.info('all finished. total time: {}'.format(format_timespan(total_end-total_start)))

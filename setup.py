@@ -18,10 +18,11 @@ setup(
     install_requires=requirements,
     description='Library for ranking relevant papers based on a set of seed papers',
     long_description=readme,
+    long_description_content_type='text/x-rst',
     author='Jason Portenoy',
     author_email='jporteno@uw.edu',
     url='https://github.com/h1-the-swan/autoreview',
-    license=license,
+    license='MIT',
     packages=find_packages(exclude=('tests', 'docs'))
 )
 

@@ -11,11 +11,7 @@ except ImportError:
         return "{:.2f} seconds".format(seconds)
 
 import logging
-logging.basicConfig(format='%(asctime)s %(name)s.%(lineno)d %(levelname)s : %(message)s',
-        datefmt="%H:%M:%S",
-        level=logging.INFO)
-# logger = logging.getLogger(__name__)
-logger = logging.getLogger('__main__').getChild(__name__)
+logger = logging.getLogger(__name__)
 
 import pandas as pd
 import numpy as np

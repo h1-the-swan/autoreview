@@ -29,7 +29,7 @@ from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
 from sklearn.metrics import classification_report
 
-from .util import ItemSelector, DataFrameColumnTransformer, ClusterTransformer, AverageTfidfCosSimTransformer
+from .transformers import ItemSelector, DataFrameColumnTransformer, ClusterTransformer, AverageTfidfCosSimTransformer
 
 from .pipeline_autoreview import PipelineExperiment
 

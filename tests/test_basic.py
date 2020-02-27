@@ -5,6 +5,9 @@ import shutil
 from pathlib import Path
 from .context import autoreview
 
+import pandas as pd
+import numpy as np
+
 import unittest
 
 
@@ -56,6 +59,14 @@ class BasicTestSuite(unittest.TestCase):
         seed_papers, target_papers, candidate_papers = autorev.get_papers_2_degrees_out(use_spark=False)
         autorev.train_models(seed_papers, target_papers, candidate_papers)
         assert len(list(self.outdir.rglob('best_model.pickle'))) > 0
+
+    def test_year_lowpass_filter(self):
+        year_lowpass_filter = autoreview.util.year_lowpass_filter
+        papers = pd.read_parquet(self.papers_fpath)
+        num_before = len(papers)
+        papers = year_lowpass_filter(papers, year=1960, year_colname='year')
+        num_after = len(papers)
+        assert num_after == 3
 
     # def test_spark_working(self):
     #     assert self.spark is not None

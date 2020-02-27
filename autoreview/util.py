@@ -106,11 +106,25 @@ def remove_missing_titles(df, colname='title'):
     logger.debug("removed {} papers with missing titles. size of haystack: {}".format(n_before-n_after, n_after))
     return df
 
-def year_lowpass_filter(df, year=None):
+def infer_year_column(df):
+    cols = df.columns
+    choices = ['year', 'paper_year', 'pub_year']
+    for c in choices:
+        for col in cols:
+            if col.lower() == c:
+                return col
+    for col in cols:
+        if 'year' in col.lower():
+            return col
+    return None
+
+def year_lowpass_filter(df, year=None, year_colname=None):
     # only keep papers published on or before a given year
     n_before = len(df)
     if year is not None:
-        df = df[df.year<=year]
+        if not year_colname:
+            year_colname = infer_year_column(df) or 'year'
+        df = df[df[year_colname]<=year]
     n_after = len(df)
     logger.debug("removed {} papers published after year {}. size of haystack: {}".format(n_before-n_after, year, n_after))
     return df

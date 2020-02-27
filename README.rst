@@ -33,6 +33,13 @@ Output:
 
 - List of papers not in the seed set, ordered descending by relevance score.
 
+Installation
+============
+
+Install via PyPI::
+
+        pip install autoreview
+
 Example
 =======
 
@@ -60,4 +67,22 @@ Example
 - This is just meant to show how the system operates. It will not provide meaningful results with such a small sample of paper and citation data.
 
 - It will output the top predictions in ``sample_data/sample_output/predictions.tsv``.
+
+Development
+============
+
+For new releases::
+
+        # increment the version number
+        bump2version patch
+
+Replace ``patch`` with ``minor`` or ``major`` as needed. Then::
+
+        # push new release to github
+        git push --tags
+
+        # build and upload to PyPI
+        python setup.py sdist bdist_wheel
+        twine check dist/*
+        twince upload dist/*
 

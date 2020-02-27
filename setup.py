@@ -16,7 +16,7 @@ with open('LICENSE') as f:
 
 setup(
     name='autoreview',
-    version='0.2.1',
+    version='0.2.2',
     install_requires=requirements,
     description='Library for ranking relevant papers based on a set of seed papers',
     long_description=readme,

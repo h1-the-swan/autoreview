@@ -63,6 +63,7 @@ class Autoreview(object):
         # if these are unspecified, the user will have to overwrite them later by calling prepare_for_collection() manually
 
         if config is not None:
+            # TODO: be less strict when checking that the config is valid (currently only supports config objects from autoreview module)
             assert isinstance(config, Config)
             self._config = config
         else:

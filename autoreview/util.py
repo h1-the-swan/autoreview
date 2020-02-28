@@ -63,7 +63,8 @@ def get_year(x):
         return None
 
 def save_pandas_dataframe_to_pickle(df, outfname):
-    if 'year' not in df.columns:
+    year_column = infer_year_column(df)
+    if year_column is None:
         df['year'] = df['pub_date'].apply(get_year)
     columns_rename = {
         # 'ID': 'Paper_ID',

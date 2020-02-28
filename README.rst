@@ -84,5 +84,5 @@ Replace ``patch`` with ``minor`` or ``major`` as needed. Then::
         # build and upload to PyPI
         python setup.py sdist bdist_wheel
         twine check dist/*
-        twince upload dist/*
+        twine upload dist/*
 

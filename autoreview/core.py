@@ -37,7 +37,7 @@ class Autoreview(object):
 
     """Toplevel Autoreview object"""
 
-    def __init__(self, outdir, id_list=None, citations=None, papers=None, sample_size=None, random_seed=None, id_colname='UID', citing_colname=None, cited_colname='cited_UID', use_spark=True, config=None, citations_data_preloaded=None, paper_data_preloaded=None):
+    def __init__(self, outdir, id_list=None, citations=None, papers=None, sample_size=None, random_seed=None, id_colname='UID', citing_colname=None, cited_colname='cited_UID', title_colname='title', use_spark=True, config=None, citations_data_preloaded=None, paper_data_preloaded=None):
         """
         :outdir: output directory.
         :random_seed: integer
@@ -61,6 +61,8 @@ class Autoreview(object):
 
         self.prepare_for_collection(id_list, citations, papers, sample_size, id_colname, citing_colname, cited_colname, citations_data_preloaded, paper_data_preloaded)
         # if these are unspecified, the user will have to overwrite them later by calling prepare_for_collection() manually
+
+        self.title_colname = title_colname
 
         if config is not None:
             # TODO: be less strict when checking that the config is valid (currently only supports config objects from autoreview module)
@@ -263,7 +265,7 @@ class Autoreview(object):
         target_ids = set(target_papers['ID'])
         # test_papers['target'] = test_papers.Paper_ID.apply(lambda x: x in target_ids)
         test_papers['target'] = test_papers['ID'].apply(lambda x: x in target_ids)
-        test_papers = remove_missing_titles(test_papers)
+        test_papers = remove_missing_titles(test_papers, self.title_colname)
         if year_lowpass is not None:
             test_papers = year_lowpass_filter(test_papers, year_lowpass)
         # logger.debug("There are {} target papers. {} of these appear in the haystack.".format(target_papers.Paper_ID.nunique(), test_papers['target'].sum()))

@@ -2,6 +2,7 @@
 
 import os
 import shutil
+from datetime import datetime
 from pathlib import Path
 from .context import autoreview
 
@@ -67,6 +68,15 @@ class BasicTestSuite(unittest.TestCase):
         papers = year_lowpass_filter(papers, year=1960, year_colname='year')
         num_after = len(papers)
         assert num_after == 3
+
+    def test_prepare_data(self):
+        autorev = self.load_autorev()
+        seed_papers, target_papers, candidate_papers = autorev.get_papers_2_degrees_out(use_spark=False)
+        candidate_papers, seed_papers, target_papers = autoreview.util.prepare_data_for_model(self.outdir, id_colname='ID', year=datetime.now().year, title_colname='title')
+        assert not candidate_papers.empty
+        assert not seed_papers.empty
+        assert not target_papers.empty
+
 
     # def test_spark_working(self):
     #     assert self.spark is not None

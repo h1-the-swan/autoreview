@@ -130,13 +130,13 @@ def year_lowpass_filter(df, year=None, year_colname=None):
     logger.debug("removed {} papers published after year {}. size of haystack: {}".format(n_before-n_after, year, n_after))
     return df
 
-def prepare_data_for_model(data_dir, year=None, id_colname='Paper_ID'):
+def prepare_data_for_model(data_dir, year=None, id_colname='Paper_ID', title_colname='title'):
     test_papers, seed_papers, target_papers = load_data_from_pickles(data_dir)
     # test_subset = test_papers.sample(n=args.subset_size, random_state=args.seed)
     test_papers = remove_seed_papers_from_test_set(test_papers, seed_papers)
     target_ids = set(target_papers[id_colname])
     test_papers['target'] = test_papers[id_colname].apply(lambda x: x in target_ids)
-    test_papers = remove_missing_titles(test_papers)
+    test_papers = remove_missing_titles(test_papers, colname=title_colname)
     if year is None:
         year = get_year_from_datadir(data_dir)
     test_papers = year_lowpass_filter(test_papers, year=year)

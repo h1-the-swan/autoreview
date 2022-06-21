@@ -23,7 +23,7 @@ locket==0.2.0
 matplotlib==2.2.2
 msgpack==0.6.1
 -e git://github.com/h1-the-swan/mysql_connect.git@cb225c6d4f1c14bcd9275f1e934d6a007d576f97#egg=mysql_connect
-numpy==1.16.1
+numpy==1.22.0
 pandas==0.24.1
 parso==0.1.1
 partd==0.3.9

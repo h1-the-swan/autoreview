@@ -33,7 +33,7 @@ prompt-toolkit==1.0.15
 psutil==5.6.0
 ptyprocess==0.5.2
 py4j==0.10.7
-pyarrow==0.13.0
+pyarrow==0.15.1
 Pygments==2.2.0
 PyMySQL==0.8.0
 pyparsing==2.2.0

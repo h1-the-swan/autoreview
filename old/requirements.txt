@@ -37,7 +37,7 @@ pyarrow==0.13.0
 Pygments==2.2.0
 PyMySQL==0.8.0
 pyparsing==2.2.0
-pyspark==2.4.2
+pyspark==3.2.2
 python-dateutil==2.7.5
 python-dotenv==0.8.2
 pytz==2018.9
